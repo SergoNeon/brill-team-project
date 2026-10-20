@@ -1,5 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
+const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
 import { Pool } from 'pg';
 import { verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
 
@@ -17,11 +19,12 @@ function rateLimit(ip){const now=Date.now();if(buckets.size>10000){for(const [k,
 async function body(req){let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>MAX_BODY)throw Object.assign(new Error('Payload too large'),{status:413});chunks.push(c)}try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Object.assign(new Error('Invalid JSON'),{status:400})}}
 function text(v,max){return typeof v==='string'?v.trim().slice(0,max+1):''}
 function validLang(v){return ['ru','he','en'].includes(v)}
-function validOrigin(req){return req.headers.origin===origin}
+function validOrigin(req){const requestOrigin=req.headers.origin;const renderOrigin=process.env.ADMIN_ORIGIN;return requestOrigin===origin||(req.url?.startsWith('/api/admin/')&&renderOrigin&&requestOrigin===renderOrigin)}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(req.headers.origin===origin){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
+ if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}
  if(!url.pathname.startsWith('/api/')){fail(res,404,'Not found');return}
  if(req.method!=='GET'&&!validOrigin(req)){fail(res,403,'Origin not allowed');return}

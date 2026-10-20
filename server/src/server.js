@@ -98,6 +98,36 @@ const server=http.createServer(async(req,res)=>{
    if(!/^[a-zA-Z][a-zA-Z0-9_]{0,99}$/.test(key)||!validLang(lang)||!value||value.length>10000){fail(res,400,'Invalid content');return}
    await pool.query('INSERT INTO content_entries(key,lang,value) VALUES($1,$2,$3) ON CONFLICT(key,lang) DO UPDATE SET value=EXCLUDED.value,updated_at=now()',[key,lang,value]);json(res,200,{ok:true});return
   }
+  if(url.pathname==='/api/admin/self-test'&&req.method==='POST'){
+   const client=await pool.connect(),checks=[];
+   try{
+    await client.query('BEGIN');
+    for(const [kind,table,translations,foreign,textColumn] of [['news','news_posts','news_translations','post_id','body'],['project','catalog_entries','catalog_translations','entry_id','description'],['service','catalog_entries','catalog_translations','entry_id','description']]){
+     const id=crypto.randomUUID(),slug='internal-self-test-'+kind+'-'+id.slice(0,8);
+     if(kind==='news')await client.query('INSERT INTO news_posts(id,slug,published) VALUES($1,$2,false)',[id,slug]);
+     else await client.query('INSERT INTO catalog_entries(id,kind,slug,published) VALUES($1,$2,$3,false)',[id,kind,slug]);
+     for(const lang of ['ru','en','he'])await client.query('INSERT INTO '+translations+'('+foreign+',lang,title,'+textColumn+') VALUES($1,$2,$3,$4)',[id,lang,'Self test '+lang,'Draft '+lang]);
+     const draft=await client.query('SELECT count(*)::int AS n FROM '+translations+' WHERE '+foreign+'=$1',[id]);
+     if(draft.rows[0].n!==3)throw Error(kind+' translation persistence failed');
+     checks.push(kind+': create and three languages');
+     await client.query('UPDATE '+translations+' SET '+textColumn+'=$1 WHERE '+foreign+'=$2 AND lang=$3',['Edited content',id,'ru']);
+     const edited=await client.query('SELECT '+textColumn+' AS value FROM '+translations+' WHERE '+foreign+'=$1 AND lang=$2',[id,'ru']);
+     if(edited.rows[0]?.value!=='Edited content')throw Error(kind+' edit failed');
+     checks.push(kind+': edit');
+     const master=kind==='news'?'news_posts':'catalog_entries';
+     await client.query('UPDATE '+master+' SET published=true WHERE id=$1',[id]);
+     const visible=await client.query('SELECT count(*)::int AS n FROM '+master+' p JOIN '+translations+' t ON t.'+foreign+'=p.id WHERE p.id=$1 AND p.published=true AND t.lang=$2',[id,'ru']);
+     if(visible.rows[0].n!==1)throw Error(kind+' publication failed');
+     checks.push(kind+': publish and public query');
+     await client.query('UPDATE '+master+' SET published=false WHERE id=$1',[id]);
+     const hidden=await client.query('SELECT count(*)::int AS n FROM '+master+' p JOIN '+translations+' t ON t.'+foreign+'=p.id WHERE p.id=$1 AND p.published=true',[id]);
+     if(hidden.rows[0].n!==0)throw Error(kind+' unpublish failed');
+     checks.push(kind+': unpublish');
+    }
+    await client.query('ROLLBACK');
+    json(res,200,{ok:true,checks,mode:'rolled-back transaction',note:'Test records were never committed or exposed to visitors'});
+   }catch(e){await client.query('ROLLBACK');console.error('Admin self-test failed:',e.message);fail(res,500,'Self-test failed: '+e.message)}finally{client.release()}return
+  }
   if(url.pathname==='/api/admin/catalog'&&req.method==='GET'){
    const q=await pool.query('SELECT e.id,e.kind,e.slug,e.published,e.sort_order,t.lang,t.title,t.description FROM catalog_entries e LEFT JOIN catalog_translations t ON t.entry_id=e.id ORDER BY e.sort_order,e.created_at DESC');
    const items=[];for(const row of q.rows){let item=items.find(x=>x.id===row.id);if(!item){item={id:row.id,kind:row.kind,slug:row.slug,published:row.published,sort_order:row.sort_order,translations:{}};items.push(item)}if(row.lang)item.translations[row.lang]={title:row.title,description:row.description}}

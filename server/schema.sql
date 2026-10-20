@@ -20,3 +20,15 @@ CREATE TABLE IF NOT EXISTS news_translations (
  lang varchar(2) NOT NULL CHECK(lang IN ('ru','he','en')),
  title varchar(180) NOT NULL, body text NOT NULL, PRIMARY KEY(post_id,lang)
 );
+
+CREATE TABLE IF NOT EXISTS admin_users (
+ id uuid PRIMARY KEY, username varchar(80) NOT NULL UNIQUE,
+ password_hash text NOT NULL, active boolean NOT NULL DEFAULT true,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS admin_sessions (
+ token_hash char(64) PRIMARY KEY,
+ user_id uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+ expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS admin_sessions_expiry_idx ON admin_sessions(expires_at);

@@ -86,8 +86,17 @@ const server=http.createServer(async(req,res)=>{
   }
   if(!await auth(req)){fail(res,401,'Unauthorized');return}
   if(req.method!=='GET'&&req.headers['x-brill-csrf']!=='1'){fail(res,403,'CSRF check failed');return}
+  if(url.pathname==='/api/admin/staff'&&req.method==='GET'){
+   const q=await pool.query('SELECT id,username FROM admin_users WHERE active=true ORDER BY username');json(res,200,{items:q.rows});return
+  }
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
-   const q=await pool.query('SELECT id,name,email,message,status,created_at FROM inquiries ORDER BY created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
+   const q=await pool.query('SELECT i.id,i.name,i.email,i.message,i.status,i.created_at,i.assigned_to,i.priority,i.due_at,u.username AS assignee_name FROM inquiries i LEFT JOIN admin_users u ON u.id=i.assigned_to ORDER BY i.created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
+  }
+  if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/assignment$/.test(url.pathname)&&req.method==='PATCH'){
+   const id=url.pathname.split('/')[4],d=await body(req);
+   if(!['low','normal','high','urgent'].includes(d.priority)||!(d.assigned_to===null||typeof d.assigned_to==='string'&&/^[a-f0-9-]{36}$/.test(d.assigned_to))||!(d.due_at===null||typeof d.due_at==='string'&&!Number.isNaN(Date.parse(d.due_at)))){fail(res,400,'Invalid assignment');return}
+   const q=await pool.query('UPDATE inquiries SET assigned_to=$1,priority=$2,due_at=$3 WHERE id=$4 AND ($1::uuid IS NULL OR EXISTS(SELECT 1 FROM admin_users WHERE id=$1 AND active=true)) RETURNING id,assigned_to,priority,due_at',[d.assigned_to,d.priority,d.due_at,id]);
+   json(res,q.rowCount?200:404,q.rows[0]||{error:'Inquiry or employee not found'});return
   }
   if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/activity$/.test(url.pathname)){
    const id=url.pathname.split('/')[4];

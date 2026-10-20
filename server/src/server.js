@@ -76,5 +76,5 @@ const server=http.createServer(async(req,res)=>{
   fail(res,404,'Not found');
  }catch(e){if(e.status){fail(res,e.status,e.message)}else{console.error('Request failed:',e.code||e.message);fail(res,e.code==='23505'?409:500,'Server error')}}
 });
-const port=Number(process.env.PORT||3000);server.listen(port,'127.0.0.1',()=>console.log('BRILL API listening on 127.0.0.1:'+port));
+const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port));
 process.on('SIGTERM',()=>server.close(()=>pool.end()));

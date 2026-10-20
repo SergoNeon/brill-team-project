@@ -23,7 +23,7 @@ function validLang(v){return ['ru','he','en'].includes(v)}
 function validOrigin(req){const requestOrigin=req.headers.origin;const renderOrigin=process.env.ADMIN_ORIGIN;return origins.has(requestOrigin)||(req.url?.startsWith('/api/admin/')&&renderOrigin&&requestOrigin===renderOrigin)}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
- if(origins.has(req.headers.origin)){res.setHeader('access-control-allow-origin',req.headers.origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
+ if(origins.has(req.headers.origin)){res.setHeader('access-control-allow-origin',req.headers.origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,PATCH,DELETE,OPTIONS')}
  if(url.pathname==='/api/news'&&req.method==='GET'){const origin=req.headers.origin;if(origins.has(origin)){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin')}}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
  if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
@@ -91,6 +91,34 @@ const server=http.createServer(async(req,res)=>{
    const data=await body(req);const key=text(data.key,100),lang=data.lang,value=text(data.value,10000);
    if(!/^[a-zA-Z][a-zA-Z0-9_]{0,99}$/.test(key)||!validLang(lang)||!value||value.length>10000){fail(res,400,'Invalid content');return}
    await pool.query('INSERT INTO content_entries(key,lang,value) VALUES($1,$2,$3) ON CONFLICT(key,lang) DO UPDATE SET value=EXCLUDED.value,updated_at=now()',[key,lang,value]);json(res,200,{ok:true});return
+  }
+  if(url.pathname==='/api/catalog'&&req.method==='GET'){
+   const lang=url.searchParams.get('lang')||'ru',kind=url.searchParams.get('kind');
+   if(!validLang(lang)||!['project','service'].includes(kind)){fail(res,400,'Invalid filters');return}
+   const q=await pool.query('SELECT e.id,e.kind,e.slug,e.created_at,t.title,t.description FROM catalog_entries e JOIN catalog_translations t ON t.entry_id=e.id AND t.lang=$1 WHERE e.published=true AND e.kind=$2 ORDER BY e.sort_order ASC,e.created_at DESC LIMIT 100',[lang,kind]);
+   json(res,200,{items:q.rows});return
+  }
+  if(url.pathname==='/api/admin/catalog'&&req.method==='GET'){
+   const q=await pool.query('SELECT e.id,e.kind,e.slug,e.published,e.sort_order,t.lang,t.title,t.description FROM catalog_entries e LEFT JOIN catalog_translations t ON t.entry_id=e.id ORDER BY e.sort_order,e.created_at DESC');
+   const items=[];for(const row of q.rows){let item=items.find(x=>x.id===row.id);if(!item){item={id:row.id,kind:row.kind,slug:row.slug,published:row.published,sort_order:row.sort_order,translations:{}};items.push(item)}if(row.lang)item.translations[row.lang]={title:row.title,description:row.description}}
+   json(res,200,{items});return
+  }
+  if(url.pathname==='/api/admin/catalog'&&req.method==='POST'){
+   const d=await body(req),slug=text(d.slug,140),kind=d.kind;
+   if(!['project','service'].includes(kind)||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length>140||!d.translations||typeof d.translations!=='object'||Array.isArray(d.translations)){fail(res,400,'Invalid catalog entry');return}
+   const entries=Object.entries(d.translations);
+   if(!entries.length||entries.some(([l,v])=>!validLang(l)||!v||typeof v.title!=='string'||!v.title.trim()||v.title.trim().length>180||typeof v.description!=='string'||!v.description.trim()||v.description.trim().length>10000)){fail(res,400,'Invalid translations');return}
+   const client=await pool.connect();try{await client.query('BEGIN');const id=crypto.randomUUID();await client.query('INSERT INTO catalog_entries(id,kind,slug) VALUES($1,$2,$3)',[id,kind,slug]);for(const [lang,v] of entries)await client.query('INSERT INTO catalog_translations(entry_id,lang,title,description) VALUES($1,$2,$3,$4)',[id,lang,v.title.trim(),v.description.trim()]);await client.query('COMMIT');json(res,201,{id})}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
+  }
+  if(url.pathname.startsWith('/api/admin/catalog/')&&/^[a-f0-9-]{36}$/.test(url.pathname.slice('/api/admin/catalog/'.length))&&req.method==='PATCH'){
+   const id=url.pathname.split('/').pop(),d=await body(req);
+   if(typeof d.published!=='boolean'&&(!d.translations||typeof d.translations!=='object'||Array.isArray(d.translations))){fail(res,400,'Invalid update');return}
+   const entries=d.translations?Object.entries(d.translations):[];
+   if(entries.some(([l,v])=>!validLang(l)||!v||typeof v.title!=='string'||!v.title.trim()||v.title.trim().length>180||typeof v.description!=='string'||!v.description.trim()||v.description.trim().length>10000)){fail(res,400,'Invalid translations');return}
+   const client=await pool.connect();try{await client.query('BEGIN');const q=await client.query('SELECT id FROM catalog_entries WHERE id=$1 FOR UPDATE',[id]);if(!q.rowCount){await client.query('ROLLBACK');fail(res,404,'Not found');return}
+   for(const [lang,v] of entries)await client.query('INSERT INTO catalog_translations(entry_id,lang,title,description) VALUES($1,$2,$3,$4) ON CONFLICT(entry_id,lang) DO UPDATE SET title=EXCLUDED.title,description=EXCLUDED.description',[id,lang,v.title.trim(),v.description.trim()]);
+   if(typeof d.published==='boolean')await client.query('UPDATE catalog_entries SET published=$1,updated_at=now() WHERE id=$2',[d.published,id]);else await client.query('UPDATE catalog_entries SET updated_at=now() WHERE id=$1',[id]);
+   await client.query('COMMIT');json(res,200,{ok:true})}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
   }
   if(url.pathname==='/api/admin/news'&&req.method==='GET'){
    const q=await pool.query("SELECT p.id,p.slug,p.published,p.created_at,t.lang,t.title,t.body FROM news_posts p LEFT JOIN news_translations t ON t.post_id=p.id ORDER BY p.created_at DESC LIMIT 300");

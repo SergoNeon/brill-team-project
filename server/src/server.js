@@ -91,6 +91,17 @@ const server=http.createServer(async(req,res)=>{
    if(!/^[a-zA-Z][a-zA-Z0-9_]{0,99}$/.test(key)||!validLang(lang)||!value||value.length>10000){fail(res,400,'Invalid content');return}
    await pool.query('INSERT INTO content_entries(key,lang,value) VALUES($1,$2,$3) ON CONFLICT(key,lang) DO UPDATE SET value=EXCLUDED.value,updated_at=now()',[key,lang,value]);json(res,200,{ok:true});return
   }
+  if(url.pathname==='/api/admin/news'&&req.method==='GET'){
+   const q=await pool.query("SELECT p.id,p.slug,p.published,p.created_at,t.lang,t.title,t.body FROM news_posts p LEFT JOIN news_translations t ON t.post_id=p.id ORDER BY p.created_at DESC LIMIT 300");
+   const items=[];for(const row of q.rows){let item=items.find(x=>x.id===row.id);if(!item){item={id:row.id,slug:row.slug,published:row.published,created_at:row.created_at,translations:{}};items.push(item)}if(row.lang)item.translations[row.lang]={title:row.title,body:row.body}}
+   json(res,200,{items});return
+  }
+  if(/^\\/api\\/admin\\/news\\/[a-f0-9-]+$/.test(url.pathname)&&req.method==='PUT'){
+   const id=url.pathname.split('/').pop(),d=await body(req);
+   if(typeof d.published!=='boolean'){fail(res,400,'Invalid publication state');return}
+   const q=await pool.query('UPDATE news_posts SET published=$1,updated_at=now() WHERE id=$2 RETURNING id,published',[d.published,id]);
+   json(res,q.rowCount?200:404,q.rows[0]||{error:'Not found'});return
+  }
   if(url.pathname==='/api/admin/news'&&req.method==='POST'){
    const d=await body(req);const slug=text(d.slug,140);if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length>140||typeof d.published!=='boolean'||!d.translations||typeof d.translations!=='object'){fail(res,400,'Invalid news');return}
    const entries=Object.entries(d.translations);if(!entries.length||entries.some(([l,v])=>!validLang(l)||!v||!text(v.title,180)||text(v.title,180).length>180||!text(v.body,10000)||text(v.body,10000).length>10000)){fail(res,400,'Invalid translations');return}

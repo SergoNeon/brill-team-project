@@ -41,3 +41,19 @@ CREATE TABLE IF NOT EXISTS admin_invites (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS admin_invites_expiry_idx ON admin_invites(expires_at);
+
+-- Client chat: per-inquiry bearer capability; never store the raw token.
+CREATE TABLE IF NOT EXISTS inquiry_client_access (
+ inquiry_id uuid PRIMARY KEY REFERENCES inquiries(id) ON DELETE CASCADE,
+ token_hash char(64) NOT NULL UNIQUE,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS inquiry_chat_messages (
+ id uuid PRIMARY KEY,
+ inquiry_id uuid NOT NULL REFERENCES inquiries(id) ON DELETE CASCADE,
+ sender_kind varchar(16) NOT NULL CHECK(sender_kind IN ('client','employee')),
+ sender_id uuid REFERENCES admin_users(id),
+ message text NOT NULL CHECK(char_length(message) BETWEEN 1 AND 2000),
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS inquiry_chat_history_idx ON inquiry_chat_messages(inquiry_id,created_at,id);

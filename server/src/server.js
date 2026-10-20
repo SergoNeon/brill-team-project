@@ -37,7 +37,22 @@ const server=http.createServer(async(req,res)=>{
    const data=await body(req);if(data.website){json(res,202,{ok:true});return}
    const name=text(data.name,120),email=text(data.email,254),message=text(data.message,5000);
    if(!name||name.length>120||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||message.length<10||message.length>5000){fail(res,400,'Invalid fields');return}
-   await pool.query('INSERT INTO inquiries (id,name,email,message) VALUES ($1,$2,$3,$4)',[crypto.randomUUID(),name,email,message]);json(res,201,{ok:true});return
+   const inquiryId=crypto.randomUUID(),accessToken=crypto.randomBytes(32).toString('base64url'),accessHash=crypto.createHash('sha256').update(accessToken).digest('hex');
+   const client=await pool.connect();try{await client.query('BEGIN');await client.query('INSERT INTO inquiries (id,name,email,message) VALUES ($1,$2,$3,$4)',[inquiryId,name,email,message]);await client.query('INSERT INTO inquiry_client_access(inquiry_id,token_hash) VALUES($1,$2)',[inquiryId,accessHash]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
+   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
+  }
+  if(/^\/api\/client\/inquiries\/[a-f0-9-]{36}\/chat$/.test(url.pathname)&&['GET','POST'].includes(req.method)){
+   const inquiryId=url.pathname.split('/')[4],token=req.headers['x-brill-chat-token'];
+   if(typeof token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(token)){fail(res,401,'Invalid chat access');return}
+   const hash=crypto.createHash('sha256').update(token).digest('hex');
+   const allowed=await pool.query('SELECT 1 FROM inquiry_client_access WHERE inquiry_id=$1 AND token_hash=$2',[inquiryId,hash]);
+   if(!allowed.rowCount){fail(res,403,'Chat access denied');return}
+   if(req.method==='GET'){const q=await pool.query("SELECT id,sender_kind,message,created_at FROM inquiry_chat_messages WHERE inquiry_id=$1 ORDER BY created_at,id LIMIT 200",[inquiryId]);json(res,200,{items:q.rows});return}
+   if(!rateLimit('chat:'+inquiryId+':'+(req.socket.remoteAddress||'unknown'))){fail(res,429,'Too many messages');return}
+   const data=await body(req),message=text(data.message,2000);
+   if(!message||message.length>2000){fail(res,400,'Invalid message');return}
+   const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,message) VALUES($1,$2,'client',$3) RETURNING id,created_at",[crypto.randomUUID(),inquiryId,message]);
+   json(res,201,{ok:true,...q.rows[0]});return
   }
   if(url.pathname==='/api/content'&&req.method==='GET'){
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}

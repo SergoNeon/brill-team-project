@@ -102,7 +102,8 @@ const server=http.createServer(async(req,res)=>{
       ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING`,[userId]);
     const result=await client.query(`SELECT n.id,n.inquiry_id,n.notification_kind,n.due_at,n.created_at,i.name,i.priority
       FROM inquiry_sla_notifications n JOIN inquiries i ON i.id=n.inquiry_id
-      WHERE n.recipient_id=$1 AND n.read_at IS NULL AND i.status<>'closed' AND i.assigned_to=$1
+      WHERE n.recipient_id=$1 AND n.read_at IS NULL AND i.status<>'closed' AND i.assigned_to=$1 AND i.due_at=n.due_at
+      AND (n.notification_kind='overdue' OR (n.notification_kind='due_soon' AND i.due_at>now()))
       ORDER BY n.created_at DESC LIMIT 50`,[userId]);
     await client.query('COMMIT');json(res,200,{items:result.rows});
    }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
@@ -240,6 +241,16 @@ const server=http.createServer(async(req,res)=>{
     const overdue=await client.query("SELECT count(*)::int AS n FROM inquiries WHERE id=$1 AND status<>'closed' AND due_at<now()",[id]);
     if(urgent.rows[0].n!==1||overdue.rows[0].n!==1)throw Error('Urgent or overdue classification failed');
     checks.push('urgent and overdue classification');
+    const notificationId=crypto.randomUUID();
+    await client.query("INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at) VALUES($1,$2,$3,'overdue',$4) ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING",[notificationId,id,user.id,deadline]);
+    await client.query("INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at) VALUES($1,$2,$3,'overdue',$4) ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING",[crypto.randomUUID(),id,user.id,deadline]);
+    const uniqueNotification=await client.query("SELECT id FROM inquiry_sla_notifications WHERE inquiry_id=$1 AND recipient_id=$2 AND notification_kind='overdue' AND due_at=$3",[id,user.id,deadline]);
+    if(uniqueNotification.rowCount!==1)throw Error('SLA duplicate notification');
+    checks.push('SLA notifications deduplicated');
+    await client.query('UPDATE inquiry_sla_notifications SET read_at=now() WHERE id=$1',[uniqueNotification.rows[0].id]);
+    const unread=await client.query('SELECT count(*)::int AS n FROM inquiry_sla_notifications WHERE inquiry_id=$1 AND read_at IS NULL',[id]);
+    if(unread.rows[0].n!==0)throw Error('SLA read status failed');
+    checks.push('SLA read acknowledgement persisted');
     await client.query('ROLLBACK');
     json(res,200,{ok:true,checks,mode:'rolled-back transaction',note:'No test records committed'});
    }catch(e){await client.query('ROLLBACK');console.error('Inquiry self-test failed:',e.message);fail(res,500,'Inquiry self-test failed')}finally{client.release()}return

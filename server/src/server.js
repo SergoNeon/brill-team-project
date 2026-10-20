@@ -95,8 +95,23 @@ const server=http.createServer(async(req,res)=>{
   if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/assignment$/.test(url.pathname)&&req.method==='PATCH'){
    const id=url.pathname.split('/')[4],d=await body(req);
    if(!['low','normal','high','urgent'].includes(d.priority)||!(d.assigned_to===null||typeof d.assigned_to==='string'&&/^[a-f0-9-]{36}$/.test(d.assigned_to))||!(d.due_at===null||typeof d.due_at==='string'&&!Number.isNaN(Date.parse(d.due_at)))){fail(res,400,'Invalid assignment');return}
-   const q=await pool.query('UPDATE inquiries SET assigned_to=$1,priority=$2,due_at=$3 WHERE id=$4 AND ($1::uuid IS NULL OR EXISTS(SELECT 1 FROM admin_users WHERE id=$1 AND active=true)) RETURNING id,assigned_to,priority,due_at',[d.assigned_to,d.priority,d.due_at,id]);
-   json(res,q.rowCount?200:404,q.rows[0]||{error:'Inquiry or employee not found'});return
+   const token=parseCookie(req.headers.cookie,'brill_session'),client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const actor=await client.query('SELECT u.id,u.username FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true',[tokenDigest(token)]);
+    if(!actor.rowCount){await client.query('ROLLBACK');fail(res,401,'Unauthorized');return}
+    const old=await client.query('SELECT assigned_to,priority,due_at FROM inquiries WHERE id=$1 FOR UPDATE',[id]);
+    if(!old.rowCount){await client.query('ROLLBACK');fail(res,404,'Inquiry not found');return}
+    if(d.assigned_to){const valid=await client.query('SELECT 1 FROM admin_users WHERE id=$1 AND active=true',[d.assigned_to]);if(!valid.rowCount){await client.query('ROLLBACK');fail(res,400,'Employee not active');return}}
+    const q=await client.query('UPDATE inquiries SET assigned_to=$1,priority=$2,due_at=$3 WHERE id=$4 RETURNING id,assigned_to,priority,due_at',[d.assigned_to,d.priority,d.due_at,id]);
+    const previous=old.rows[0],next=q.rows[0];
+    const changes=[];
+    if(previous.assigned_to!==next.assigned_to)changes.push('Ответственный: '+(previous.assigned_to||'не назначен')+' → '+(next.assigned_to||'не назначен'));
+    if(previous.priority!==next.priority)changes.push('Приоритет: '+previous.priority+' → '+next.priority);
+    if((previous.due_at?new Date(previous.due_at).toISOString():null)!==(next.due_at?new Date(next.due_at).toISOString():null))changes.push('Срок: '+(previous.due_at?new Date(previous.due_at).toISOString():'не указан')+' → '+(next.due_at?new Date(next.due_at).toISOString():'не указан'));
+    if(changes.length)await client.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,note) VALUES($1,$2,$3,$4,'note',$5)",[crypto.randomUUID(),id,actor.rows[0].id,actor.rows[0].username,'Изменение назначения: '+changes.join('; ')]);
+    await client.query('COMMIT');json(res,200,next);
+   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
   }
   if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/activity$/.test(url.pathname)){
    const id=url.pathname.split('/')[4];

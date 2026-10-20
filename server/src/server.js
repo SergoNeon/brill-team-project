@@ -154,6 +154,31 @@ const server=http.createServer(async(req,res)=>{
     json(res,200,{ok:true,checks,mode:'rolled-back transaction',note:'Test records were never committed or exposed to visitors'});
    }catch(e){await client.query('ROLLBACK');console.error('Admin self-test failed:',e.message);fail(res,500,'Self-test failed: '+e.message)}finally{client.release()}return
   }
+  if(url.pathname==='/api/admin/inquiries/self-test'&&req.method==='POST'){
+   const client=await pool.connect(),checks=[];
+   try{
+    await client.query('BEGIN');
+    const actor=await client.query('SELECT u.id,u.username FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true',[tokenDigest(parseCookie(req.headers.cookie,'brill_session'))]);
+    if(!actor.rowCount)throw Error('Authenticated actor missing');
+    const user=actor.rows[0],id=crypto.randomUUID();
+    await client.query('INSERT INTO inquiries(id,name,email,message) VALUES($1,$2,$3,$4)',[id,'Integration test','test@example.invalid','Temporary test inquiry']);
+    checks.push('test inquiry created');
+    const note='Internal note verification '+id;
+    await client.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,note) VALUES($1,$2,$3,$4,'note',$5)",[crypto.randomUUID(),id,user.id,user.username,note]);
+    const saved=await client.query("SELECT actor_name,note FROM inquiry_activity WHERE inquiry_id=$1 AND action='note'",[id]);
+    if(saved.rows[0]?.note!==note||saved.rows[0]?.actor_name!==user.username)throw Error('Note or actor mismatch');
+    checks.push('note persisted with authenticated employee');
+    const old=await client.query('SELECT status FROM inquiries WHERE id=$1 FOR UPDATE',[id]);
+    await client.query("UPDATE inquiries SET status='read' WHERE id=$1",[id]);
+    await client.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,old_status,new_status) VALUES($1,$2,$3,$4,'status',$5,'read')",[crypto.randomUUID(),id,user.id,user.username,old.rows[0].status]);
+    const status=await client.query('SELECT status FROM inquiries WHERE id=$1',[id]);
+    const history=await client.query('SELECT action,actor_name,old_status,new_status,note FROM inquiry_activity WHERE inquiry_id=$1 ORDER BY created_at,id',[id]);
+    if(status.rows[0]?.status!=='read'||history.rowCount!==2||!history.rows.some(x=>x.action==='status'&&x.new_status==='read'&&x.actor_name===user.username))throw Error('Status or activity history mismatch');
+    checks.push('status transition and history readable');
+    await client.query('ROLLBACK');
+    json(res,200,{ok:true,checks,mode:'rolled-back transaction',note:'No test records committed'});
+   }catch(e){await client.query('ROLLBACK');console.error('Inquiry self-test failed:',e.message);fail(res,500,'Inquiry self-test failed')}finally{client.release()}return
+  }
   if(url.pathname==='/api/admin/catalog'&&req.method==='GET'){
    const q=await pool.query('SELECT e.id,e.kind,e.slug,e.published,e.sort_order,t.lang,t.title,t.description FROM catalog_entries e LEFT JOIN catalog_translations t ON t.entry_id=e.id ORDER BY e.sort_order,e.created_at DESC');
    const items=[];for(const row of q.rows){let item=items.find(x=>x.id===row.id);if(!item){item={id:row.id,kind:row.kind,slug:row.slug,published:row.published,sort_order:row.sort_order,translations:{}};items.push(item)}if(row.lang)item.translations[row.lang]={title:row.title,description:row.description}}

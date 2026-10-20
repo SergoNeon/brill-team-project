@@ -107,7 +107,7 @@ const server=http.createServer(async(req,res)=>{
     await client.query('COMMIT');json(res,200,{items:result.rows});
    }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
   }
-  if(/^\\/api\\/admin\\/sla-notifications\\/[a-f0-9-]{36}\\/read$/.test(url.pathname)&&req.method==='POST'){
+  if(url.pathname.startsWith('/api/admin/sla-notifications/')&&url.pathname.endsWith('/read')&&/^[a-f0-9-]{36}$/.test(url.pathname.split('/')[4])&&req.method==='POST'){
    const token=parseCookie(req.headers.cookie,'brill_session');
    const q=await pool.query(`UPDATE inquiry_sla_notifications SET read_at=now()
     WHERE id=$1 AND recipient_id IN (SELECT u.id FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$2 AND s.expires_at>now() AND u.active=true)

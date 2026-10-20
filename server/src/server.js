@@ -86,6 +86,34 @@ const server=http.createServer(async(req,res)=>{
   }
   if(!await auth(req)){fail(res,401,'Unauthorized');return}
   if(req.method!=='GET'&&req.headers['x-brill-csrf']!=='1'){fail(res,403,'CSRF check failed');return}
+  if(url.pathname==='/api/admin/sla-notifications'&&req.method==='GET'){
+   const token=parseCookie(req.headers.cookie,'brill_session');
+   const actor=await pool.query('SELECT u.id FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true',[tokenDigest(token)]);
+   if(!actor.rowCount){fail(res,401,'Unauthorized');return}
+   const userId=actor.rows[0].id;
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    await client.query(`INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at)
+      SELECT gen_random_uuid(),i.id,i.assigned_to,
+      CASE WHEN i.due_at<=now() THEN 'overdue' ELSE 'due_soon' END,i.due_at
+      FROM inquiries i WHERE i.assigned_to=$1 AND i.status<>'closed' AND i.due_at IS NOT NULL
+      AND i.due_at<=now()+interval '1 hour'
+      ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING`,[userId]);
+    const result=await client.query(`SELECT n.id,n.inquiry_id,n.notification_kind,n.due_at,n.created_at,i.name,i.priority
+      FROM inquiry_sla_notifications n JOIN inquiries i ON i.id=n.inquiry_id
+      WHERE n.recipient_id=$1 AND n.read_at IS NULL AND i.status<>'closed' AND i.assigned_to=$1
+      ORDER BY n.created_at DESC LIMIT 50`,[userId]);
+    await client.query('COMMIT');json(res,200,{items:result.rows});
+   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
+  }
+  if(/^\\/api\\/admin\\/sla-notifications\\/[a-f0-9-]{36}\\/read$/.test(url.pathname)&&req.method==='POST'){
+   const token=parseCookie(req.headers.cookie,'brill_session');
+   const q=await pool.query(`UPDATE inquiry_sla_notifications SET read_at=now()
+    WHERE id=$1 AND recipient_id IN (SELECT u.id FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$2 AND s.expires_at>now() AND u.active=true)
+    RETURNING id`,[url.pathname.split('/')[4],tokenDigest(token)]);
+   json(res,q.rowCount?200:404,q.rowCount?{ok:true}:{error:'Not found'});return
+  }
   if(url.pathname==='/api/admin/staff'&&req.method==='GET'){
    const q=await pool.query('SELECT id,username FROM admin_users WHERE active=true ORDER BY username');json(res,200,{items:q.rows});return
   }

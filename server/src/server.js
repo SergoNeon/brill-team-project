@@ -1,17 +1,18 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { Pool } from 'pg';
+import { verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
 
-const required=['DATABASE_URL','ADMIN_TOKEN','PUBLIC_ORIGIN'];
+const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
-if(process.env.ADMIN_TOKEN.length<32) throw new Error('ADMIN_TOKEN must be at least 32 characters');
+
 const origin=new URL(process.env.PUBLIC_ORIGIN).origin;
 const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='disable'?false:{rejectUnauthorized:true},max:5});
 const buckets=new Map();
 const MAX_BODY=16*1024;
 function json(res,status,data){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(data))}
 function fail(res,status,error){json(res,status,{error})}
-function auth(req){const h=req.headers.authorization||'';const token=h.startsWith('Bearer ')?h.slice(7):'';const expected=process.env.ADMIN_TOKEN;return token.length===expected.length&&crypto.timingSafeEqual(Buffer.from(token),Buffer.from(expected))}
+async function auth(req){const token=parseCookie(req.headers.cookie,'brill_session');if(!/^[A-Za-z0-9_-]{43}$/.test(token))return false;const q=await pool.query('SELECT 1 FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true',[tokenDigest(token)]);return q.rowCount>0}
 function rateLimit(ip){const now=Date.now();if(buckets.size>10000){for(const [k,v] of buckets)if(now-v.start>3600000)buckets.delete(k)}const v=buckets.get(ip)||{start:now,count:0};if(now-v.start>3600000){v.start=now;v.count=0}v.count++;buckets.set(ip,v);return v.count<=5}
 async function body(req){let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>MAX_BODY)throw Object.assign(new Error('Payload too large'),{status:413});chunks.push(c)}try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Object.assign(new Error('Invalid JSON'),{status:400})}}
 function text(v,max){return typeof v==='string'?v.trim().slice(0,max+1):''}
@@ -19,7 +20,7 @@ function validLang(v){return ['ru','he','en'].includes(v)}
 function validOrigin(req){return req.headers.origin===origin}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
- if(req.headers.origin===origin){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-headers','content-type,authorization');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
+ if(req.headers.origin===origin){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}
  if(!url.pathname.startsWith('/api/')){fail(res,404,'Not found');return}
@@ -40,7 +41,21 @@ const server=http.createServer(async(req,res)=>{
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}
    const q=await pool.query('SELECT p.id,p.slug,p.created_at,t.title,t.body FROM news_posts p JOIN news_translations t ON t.post_id=p.id AND t.lang=$1 WHERE p.published=true ORDER BY p.created_at DESC LIMIT 30',[lang]);json(res,200,{items:q.rows});return
   }
-  if(!auth(req)){fail(res,401,'Unauthorized');return}
+  if(url.pathname==='/api/admin/login'&&req.method==='POST'){
+   const d=await body(req);const username=text(d.username,80),password=d.password;
+   if(!username||username.length>80||typeof password!=='string'||password.length>1024){fail(res,400,'Invalid credentials');return}
+   if(!rateLimit('login:'+(req.socket.remoteAddress||'unknown'))){fail(res,429,'Too many attempts');return}
+   const q=await pool.query('SELECT id,password_hash FROM admin_users WHERE username=$1 AND active=true',[username]);
+   if(!q.rowCount||!verifyPassword(password,q.rows[0].password_hash)){fail(res,401,'Invalid credentials');return}
+   const token=createSessionToken();await pool.query("INSERT INTO admin_sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '8 hours')",[tokenDigest(token),q.rows[0].id]);
+   res.setHeader('set-cookie',secureSessionCookie(token));json(res,200,{ok:true});return
+  }
+  if(url.pathname==='/api/admin/logout'&&req.method==='POST'){
+   const token=parseCookie(req.headers.cookie,'brill_session');if(token)await pool.query('DELETE FROM admin_sessions WHERE token_hash=$1',[tokenDigest(token)]);
+   res.setHeader('set-cookie',secureSessionCookie('',0));json(res,200,{ok:true});return
+  }
+  if(!await auth(req)){fail(res,401,'Unauthorized');return}
+  if(req.method!=='GET'&&req.headers['x-brill-csrf']!=='1'){fail(res,403,'CSRF check failed');return}
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
    const q=await pool.query('SELECT id,name,email,message,status,created_at FROM inquiries ORDER BY created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
   }

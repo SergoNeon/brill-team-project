@@ -102,7 +102,7 @@ const server=http.createServer(async(req,res)=>{
    const client=await pool.connect(),checks=[];
    try{
     await client.query('BEGIN');
-    for(const [kind,table,translations,foreign,textColumn] of [['news','news_posts','news_translations','post_id','body'],['project','catalog_entries','catalog_translations','entry_id','description'],['service','catalog_entries','catalog_translations','entry_id','description']]){
+    for(const [kind,translations,foreign,textColumn] of [['news','news_translations','post_id','body'],['project','catalog_translations','entry_id','description'],['service','catalog_translations','entry_id','description']]){
      const id=crypto.randomUUID(),slug='internal-self-test-'+kind+'-'+id.slice(0,8);
      if(kind==='news')await client.query('INSERT INTO news_posts(id,slug,published) VALUES($1,$2,false)',[id,slug]);
      else await client.query('INSERT INTO catalog_entries(id,kind,slug,published) VALUES($1,$2,$3,false)',[id,kind,slug]);

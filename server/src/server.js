@@ -199,6 +199,19 @@ const server=http.createServer(async(req,res)=>{
     const history=await client.query('SELECT action,actor_name,old_status,new_status,note FROM inquiry_activity WHERE inquiry_id=$1 ORDER BY created_at,id',[id]);
     if(status.rows[0]?.status!=='read'||history.rowCount!==2||!history.rows.some(x=>x.action==='status'&&x.new_status==='read'&&x.actor_name===user.username))throw Error('Status or activity history mismatch');
     checks.push('status transition and history readable');
+    const deadline=new Date(Date.now()-3600000).toISOString();
+    await client.query('UPDATE inquiries SET assigned_to=$1,priority=$2,due_at=$3 WHERE id=$4',[user.id,'urgent',deadline,id]);
+    await client.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,note) VALUES($1,$2,$3,$4,'note',$5)",[crypto.randomUUID(),id,user.id,user.username,'Изменение назначения: ответственный, приоритет и срок']);
+    const assignment=await client.query('SELECT assigned_to,priority,due_at,status FROM inquiries WHERE id=$1',[id]);
+    if(assignment.rows[0]?.assigned_to!==user.id||assignment.rows[0]?.priority!=='urgent'||new Date(assignment.rows[0]?.due_at).toISOString()!==deadline)throw Error('Assignment fields not saved');
+    checks.push('assignee priority and deadline persisted');
+    const audit=await client.query("SELECT actor_name,note FROM inquiry_activity WHERE inquiry_id=$1 AND note LIKE 'Изменение назначения:%'",[id]);
+    if(audit.rowCount!==1||audit.rows[0].actor_name!==user.username)throw Error('Assignment audit missing');
+    checks.push('assignment audit linked to employee');
+    const urgent=await client.query("SELECT count(*)::int AS n FROM inquiries WHERE id=$1 AND priority='urgent'",[id]);
+    const overdue=await client.query("SELECT count(*)::int AS n FROM inquiries WHERE id=$1 AND status<>'closed' AND due_at<now()",[id]);
+    if(urgent.rows[0].n!==1||overdue.rows[0].n!==1)throw Error('Urgent or overdue classification failed');
+    checks.push('urgent and overdue classification');
     await client.query('ROLLBACK');
     json(res,200,{ok:true,checks,mode:'rolled-back transaction',note:'No test records committed'});
    }catch(e){await client.query('ROLLBACK');console.error('Inquiry self-test failed:',e.message);fail(res,500,'Inquiry self-test failed')}finally{client.release()}return

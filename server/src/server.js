@@ -2,8 +2,9 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
 const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
+const activationHtml=readFileSync(new URL('./activate.html',import.meta.url),'utf8');
 import { Pool } from 'pg';
-import { verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
+import { hashPassword, verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
 
 const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
@@ -25,6 +26,7 @@ const server=http.createServer(async(req,res)=>{
  if(origins.has(req.headers.origin)){res.setHeader('access-control-allow-origin',req.headers.origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
  if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
+ if(url.pathname==='/admin/activate'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(activationHtml);return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}
  if(!url.pathname.startsWith('/api/')){fail(res,404,'Not found');return}
  if(req.method!=='GET'&&!validOrigin(req)){fail(res,403,'Origin not allowed');return}
@@ -43,6 +45,24 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/news'&&req.method==='GET'){
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}
    const q=await pool.query('SELECT p.id,p.slug,p.created_at,t.title,t.body FROM news_posts p JOIN news_translations t ON t.post_id=p.id AND t.lang=$1 WHERE p.published=true ORDER BY p.created_at DESC LIMIT 30',[lang]);json(res,200,{items:q.rows});return
+  }
+  if(url.pathname==='/api/admin/activate'&&req.method==='POST'){
+   const d=await body(req),token=d.token,password=d.password;
+   if(typeof token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(token)||typeof password!=='string'||password.length<12||password.length>256){fail(res,400,'Invalid activation details');return}
+   if(!rateLimit('activate:'+(req.socket.remoteAddress||'unknown'))){fail(res,429,'Too many attempts');return}
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const q=await client.query('SELECT email FROM admin_invites WHERE token_hash=$1 AND used_at IS NULL AND expires_at>now() FOR UPDATE',[tokenDigest(token)]);
+    if(!q.rowCount){await client.query('ROLLBACK');fail(res,400,'Invalid or expired activation link');return}
+    const email=q.rows[0].email;
+    const exists=await client.query('SELECT 1 FROM admin_users WHERE username=$1',[email]);
+    if(exists.rowCount){await client.query('ROLLBACK');fail(res,409,'Account already exists');return}
+    await client.query('INSERT INTO admin_users(id,username,password_hash) VALUES($1,$2,$3)',[crypto.randomUUID(),email,hashPassword(password)]);
+    await client.query('UPDATE admin_invites SET used_at=now() WHERE token_hash=$1',[tokenDigest(token)]);
+    await client.query('COMMIT');
+    json(res,201,{ok:true});
+   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
   }
   if(url.pathname==='/api/admin/login'&&req.method==='POST'){
    const d=await body(req);const username=text(d.username,80),password=d.password;

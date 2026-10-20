@@ -118,6 +118,23 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/admin/staff'&&req.method==='GET'){
    const q=await pool.query('SELECT id,username FROM admin_users WHERE active=true ORDER BY username');json(res,200,{items:q.rows});return
   }
+  if(url.pathname==='/api/admin/inquiries/overview'&&req.method==='GET'){
+   const q=await pool.query(`SELECT
+    count(*)::int AS total,
+    count(*) FILTER (WHERE status='new')::int AS new_count,
+    count(*) FILTER (WHERE status='read')::int AS in_progress,
+    count(*) FILTER (WHERE status='closed')::int AS closed,
+    count(*) FILTER (WHERE status<>'closed' AND assigned_to IS NULL)::int AS unassigned,
+    count(*) FILTER (WHERE status<>'closed' AND due_at<now())::int AS overdue,
+    count(*) FILTER (WHERE status<>'closed' AND priority='urgent')::int AS urgent
+    FROM inquiries`);
+   const employees=await pool.query(`SELECT u.id,u.username,
+    count(i.id) FILTER (WHERE i.status<>'closed')::int AS active,
+    count(i.id) FILTER (WHERE i.status<>'closed' AND i.due_at<now())::int AS overdue
+    FROM admin_users u LEFT JOIN inquiries i ON i.assigned_to=u.id
+    WHERE u.active=true GROUP BY u.id,u.username ORDER BY active DESC,u.username LIMIT 100`);
+   json(res,200,{summary:q.rows[0],employees:employees.rows});return
+  }
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
    const q=await pool.query('SELECT i.id,i.name,i.email,i.message,i.status,i.created_at,i.assigned_to,i.priority,i.due_at,u.username AS assignee_name FROM inquiries i LEFT JOIN admin_users u ON u.id=i.assigned_to ORDER BY i.created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
   }

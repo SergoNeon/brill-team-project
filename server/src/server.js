@@ -241,12 +241,16 @@ const server=http.createServer(async(req,res)=>{
     const overdue=await client.query("SELECT count(*)::int AS n FROM inquiries WHERE id=$1 AND status<>'closed' AND due_at<now()",[id]);
     if(urgent.rows[0].n!==1||overdue.rows[0].n!==1)throw Error('Urgent or overdue classification failed');
     checks.push('urgent and overdue classification');
-    const notificationId=crypto.randomUUID();
-    await client.query("INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at) VALUES($1,$2,$3,'overdue',$4) ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING",[notificationId,id,user.id,deadline]);
-    await client.query("INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at) VALUES($1,$2,$3,'overdue',$4) ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING",[crypto.randomUUID(),id,user.id,deadline]);
+    const createSla=()=>client.query(`INSERT INTO inquiry_sla_notifications(id,inquiry_id,recipient_id,notification_kind,due_at)
+      SELECT gen_random_uuid(),i.id,i.assigned_to,
+      CASE WHEN i.due_at<=now() THEN 'overdue' ELSE 'due_soon' END,i.due_at
+      FROM inquiries i WHERE i.id=$1 AND i.assigned_to=$2 AND i.status<>'closed' AND i.due_at IS NOT NULL
+      AND i.due_at<=now()+interval '1 hour'
+      ON CONFLICT(inquiry_id,recipient_id,notification_kind,due_at) DO NOTHING`,[id,user.id]);
+    const firstSla=await createSla(),secondSla=await createSla();
     const uniqueNotification=await client.query("SELECT id FROM inquiry_sla_notifications WHERE inquiry_id=$1 AND recipient_id=$2 AND notification_kind='overdue' AND due_at=$3",[id,user.id,deadline]);
-    if(uniqueNotification.rowCount!==1)throw Error('SLA duplicate notification');
-    checks.push('SLA notifications deduplicated');
+    if(firstSla.rowCount!==1||secondSla.rowCount!==0||uniqueNotification.rowCount!==1)throw Error('SLA creation or duplicate protection failed');
+    checks.push('SLA creation from actual inquiry conditions and duplicate prevention');
     await client.query('UPDATE inquiry_sla_notifications SET read_at=now() WHERE id=$1',[uniqueNotification.rows[0].id]);
     const unread=await client.query('SELECT count(*)::int AS n FROM inquiry_sla_notifications WHERE inquiry_id=$1 AND read_at IS NULL',[id]);
     if(unread.rows[0].n!==0)throw Error('SLA read status failed');

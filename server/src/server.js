@@ -47,6 +47,12 @@ const server=http.createServer(async(req,res)=>{
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}
    const q=await pool.query('SELECT p.id,p.slug,p.created_at,t.title,t.body FROM news_posts p JOIN news_translations t ON t.post_id=p.id AND t.lang=$1 WHERE p.published=true ORDER BY p.created_at DESC LIMIT 30',[lang]);json(res,200,{items:q.rows});return
   }
+  if(url.pathname==='/api/catalog'&&req.method==='GET'){
+   const lang=url.searchParams.get('lang')||'ru',kind=url.searchParams.get('kind');
+   if(!validLang(lang)||!['project','service'].includes(kind)){fail(res,400,'Invalid filters');return}
+   const q=await pool.query('SELECT e.id,e.kind,e.slug,e.created_at,t.title,t.description FROM catalog_entries e JOIN catalog_translations t ON t.entry_id=e.id AND t.lang=$1 WHERE e.published=true AND e.kind=$2 ORDER BY e.sort_order ASC,e.created_at DESC LIMIT 100',[lang,kind]);
+   json(res,200,{items:q.rows});return
+  }
   if(url.pathname==='/api/admin/activate'&&req.method==='POST'){
    const d=await body(req),token=d.token,password=d.password;
    if(typeof token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(token)||typeof password!=='string'||password.length<12||password.length>256){fail(res,400,'Invalid activation details');return}
@@ -91,12 +97,6 @@ const server=http.createServer(async(req,res)=>{
    const data=await body(req);const key=text(data.key,100),lang=data.lang,value=text(data.value,10000);
    if(!/^[a-zA-Z][a-zA-Z0-9_]{0,99}$/.test(key)||!validLang(lang)||!value||value.length>10000){fail(res,400,'Invalid content');return}
    await pool.query('INSERT INTO content_entries(key,lang,value) VALUES($1,$2,$3) ON CONFLICT(key,lang) DO UPDATE SET value=EXCLUDED.value,updated_at=now()',[key,lang,value]);json(res,200,{ok:true});return
-  }
-  if(url.pathname==='/api/catalog'&&req.method==='GET'){
-   const lang=url.searchParams.get('lang')||'ru',kind=url.searchParams.get('kind');
-   if(!validLang(lang)||!['project','service'].includes(kind)){fail(res,400,'Invalid filters');return}
-   const q=await pool.query('SELECT e.id,e.kind,e.slug,e.created_at,t.title,t.description FROM catalog_entries e JOIN catalog_translations t ON t.entry_id=e.id AND t.lang=$1 WHERE e.published=true AND e.kind=$2 ORDER BY e.sort_order ASC,e.created_at DESC LIMIT 100',[lang,kind]);
-   json(res,200,{items:q.rows});return
   }
   if(url.pathname==='/api/admin/catalog'&&req.method==='GET'){
    const q=await pool.query('SELECT e.id,e.kind,e.slug,e.published,e.sort_order,t.lang,t.title,t.description FROM catalog_entries e LEFT JOIN catalog_translations t ON t.entry_id=e.id ORDER BY e.sort_order,e.created_at DESC');

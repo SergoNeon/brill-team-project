@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
  expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS admin_sessions_expiry_idx ON admin_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS admin_invites (
+ token_hash char(64) PRIMARY KEY,
+ email varchar(254) NOT NULL,
+ expires_at timestamptz NOT NULL,
+ used_at timestamptz,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS admin_invites_expiry_idx ON admin_invites(expires_at);

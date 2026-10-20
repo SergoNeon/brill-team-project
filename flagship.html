@@ -19,6 +19,40 @@ html[dir=rtl] .hero-title{letter-spacing:-.07em}html[dir=rtl] .eyebrow:before{or
 @media(max-width:820px){.site-header{position:sticky;top:0}.nav{max-height:calc(100dvh - 72px);overflow-y:auto}.hero-title{overflow-wrap:anywhere}.hero-content{padding-top:64px}.hero-side{margin-top:52px}.side-caption{max-width:520px}.section h2{overflow-wrap:anywhere}}
 @media(max-width:430px){.hero-title{font-size:clamp(47px,11.9vw,55px)}.hero-content{padding-top:55px;padding-bottom:54px}.hero-actions{gap:16px}.hero-side{margin-top:45px}.section{padding:76px 0}.section h2{font-size:clamp(40px,10.5vw,48px)}.about h2{font-size:clamp(38px,10.6vw,45px)}}
 @media(prefers-reduced-motion:no-preference){.hero-title,.hero-copy,.hero-actions{animation:rise-in .8s var(--ease) both}.hero-copy{animation-delay:.1s}.hero-actions{animation-delay:.2s}@keyframes rise-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}}
+/* Flagship V4 — coherent editorial visual system across every section */
+:root{--rule:#ffffff2c;--surface:#141216;--type-muted:#b2aeb1}
+.section-kicker{display:flex;align-items:center;gap:15px;line-height:1.4}
+.section-kicker:before{content:"";display:block;width:23px;height:1px;background:var(--gold);flex:none}
+.section-head h2,.about h2,.news-layout h2,.contact h2{text-wrap:balance}
+#expertise{background:linear-gradient(160deg,#0d0c10 0%,#09090b 55%,#100e11 100%)}
+#expertise .section-head{padding-bottom:18px}
+.discipline{position:relative;isolation:isolate}
+.discipline:before{content:"";position:absolute;inset:0;z-index:-1;opacity:0;background:linear-gradient(90deg,#a64a5415,transparent 70%);transition:opacity .25s}
+.discipline:hover:before{opacity:1}
+.discipline .glyph{font-family:Arial,sans-serif;font-weight:400;border-color:#d5b68a55}
+.about{position:relative;overflow:hidden}
+.about:before{content:"";position:absolute;width:480px;height:480px;right:-250px;top:-200px;border:1px solid #d5b68a22;border-radius:50%;box-shadow:0 0 0 65px #d5b68a07,0 0 0 140px #d5b68a04;pointer-events:none}
+.about-layout{position:relative}
+.about-copy{max-width:590px}
+.statement{position:relative;isolation:isolate;overflow:hidden}
+.statement:after{content:"";position:absolute;right:-9%;top:-45%;width:52vw;aspect-ratio:1;border:1px solid #d5b68a25;border-radius:50%;z-index:-1;box-shadow:0 0 0 85px #d5b68a06,0 0 0 170px #d5b68a04;pointer-events:none}
+.statement h2{max-width:1100px}
+#news{background:#0d0c10}
+.news-layout{align-items:stretch}
+.news-layout>div{padding-right:35px;border-right:1px solid var(--rule)}
+.news-layout>p{display:flex;align-items:center;max-width:550px;margin:0;color:#aaa4aa}
+.contact{background:radial-gradient(ellipse at 10% 85%,#4e1e2a30,transparent 50%),#111014}
+.contact-layout>div{position:relative}
+.contact-lead{max-width:470px}
+.contact-form{padding:38px;background:#19171c;border:1px solid #ffffff25;box-shadow:0 35px 75px #0002}
+.contact-form .primary{width:100%;border:0}
+.field input,.field textarea{transition:border-color .2s,background .2s}
+.field input:hover,.field textarea:hover{background:#232027}
+.footer{min-height:110px}
+html[dir=rtl] .section-kicker:before{order:2}
+html[dir=rtl] .news-layout>div{padding-right:0;padding-left:35px;border-right:0;border-left:1px solid var(--rule)}
+@media(max-width:820px){.about:before{width:250px;height:250px;right:-190px;top:-80px}.statement:after{width:90vw;right:-50%;top:-20%}.news-layout>div{padding:0 0 30px;border-right:0;border-bottom:1px solid var(--rule)}.news-layout>p{padding-top:28px}.contact-form{padding:24px}.footer{min-height:auto}.section-kicker{gap:10px}html[dir=rtl] .news-layout>div{padding:0 0 30px;border-left:0}}
+@media(max-width:430px){.contact-form{padding:18px}.contact .section-kicker{margin-bottom:22px}.contact h2{margin-bottom:20px}.statement h2{font-size:clamp(43px,10vw,55px)}}
 </style></head><body>
 <header class="site-header"><div class="wrap head-inner"><a class="brand" href="#home" aria-label="BRILL TEAM PROJECT">BRILL <b>TEAM</b><small>PROJECT</small></a><nav class="nav" id="nav" aria-label="Main navigation"><a href="#home" data-t="home"></a><a href="#expertise" data-t="expertise"></a><a href="#about" data-t="about"></a><a href="#news" data-t="news"></a><a href="#contact" data-t="contact"></a></nav><div class="langs"><button class="lang" data-lang="ru" aria-pressed="true">RU</button><button class="lang" data-lang="he" aria-pressed="false">HE</button><button class="lang" data-lang="en" aria-pressed="false">EN</button></div><a class="header-link" href="#contact"><span>↗</span><span data-t="discuss"></span></a><button class="menu" id="menu" aria-controls="nav" aria-expanded="false" aria-label="Open menu">☰</button></div></header>
 <main><section class="hero" id="home"><div class="hero-grid"></div><div class="wrap hero-content"><div><div class="eyebrow" data-t="heroTag"></div><h1 class="hero-title"><span>BEYOND</span><span class="accent">ORDINARY.</span></h1><p class="hero-copy" data-t="heroText"></p><div class="hero-actions"><a class="primary" href="#expertise"><span data-t="discover"></span><span>↗</span></a><a class="underlink" href="#about" data-t="approach"></a></div></div><div class="hero-side"><div class="orb" aria-hidden="true"></div><div class="side-caption"><div class="section-kicker" data-t="sideTag"></div><strong data-t="sideTitle"></strong><p data-t="sideBody"></p></div></div></div></section>

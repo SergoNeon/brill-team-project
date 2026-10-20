@@ -103,6 +103,20 @@ const server=http.createServer(async(req,res)=>{
    const q=await pool.query('UPDATE news_posts SET published=$1,updated_at=now() WHERE id=$2 RETURNING id,published',[d.published,id]);
    json(res,q.rowCount?200:404,q.rows[0]||{error:'Not found'});return
   }
+  if(url.pathname.startsWith('/api/admin/news/')&&/^[a-f0-9-]{36}$/.test(url.pathname.slice('/api/admin/news/'.length))&&req.method==='PATCH'){
+   const id=url.pathname.split('/').pop(),d=await body(req);
+   if(!d.translations||typeof d.translations!=='object'||Array.isArray(d.translations)){fail(res,400,'Invalid translations');return}
+   const entries=Object.entries(d.translations);
+   if(!entries.length||entries.some(([l,v])=>!validLang(l)||!v||typeof v.title!=='string'||!v.title.trim()||v.title.trim().length>180||typeof v.body!=='string'||!v.body.trim()||v.body.trim().length>10000)){fail(res,400,'Invalid translations');return}
+   const client=await pool.connect();try{
+    await client.query('BEGIN');
+    const post=await client.query('SELECT id FROM news_posts WHERE id=$1 FOR UPDATE',[id]);
+    if(!post.rowCount){await client.query('ROLLBACK');fail(res,404,'Not found');return}
+    for(const [lang,v] of entries)await client.query('INSERT INTO news_translations(post_id,lang,title,body) VALUES($1,$2,$3,$4) ON CONFLICT(post_id,lang) DO UPDATE SET title=EXCLUDED.title,body=EXCLUDED.body',[id,lang,v.title.trim(),v.body.trim()]);
+    await client.query('UPDATE news_posts SET updated_at=now() WHERE id=$1',[id]);
+    await client.query('COMMIT');json(res,200,{ok:true});
+   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
+  }
   if(url.pathname==='/api/admin/news'&&req.method==='POST'){
    const d=await body(req);const slug=text(d.slug,140);if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||slug.length>140||typeof d.published!=='boolean'||!d.translations||typeof d.translations!=='object'){fail(res,400,'Invalid news');return}
    const entries=Object.entries(d.translations);if(!entries.length||entries.some(([l,v])=>!validLang(l)||!v||!text(v.title,180)||text(v.title,180).length>180||!text(v.body,10000)||text(v.body,10000).length>10000)){fail(res,400,'Invalid translations');return}

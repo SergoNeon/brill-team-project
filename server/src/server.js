@@ -82,7 +82,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
    const q=await pool.query('SELECT id,name,email,message,status,created_at FROM inquiries ORDER BY created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
   }
-  if(/^\/api\/admin\/inquiries\/[a-f0-9-]+$/.test(url.pathname)&&req.method==='PUT'){
+  if(url.pathname.startsWith('/api/admin/inquiries/')&&/^[a-f0-9-]{36}$/.test(url.pathname.slice('/api/admin/inquiries/'.length))&&req.method==='PUT'){
    const data=await body(req);if(!['new','read','closed'].includes(data.status)){fail(res,400,'Invalid status');return}
    const id=url.pathname.split('/').pop();const q=await pool.query('UPDATE inquiries SET status=$1 WHERE id=$2 RETURNING id,status',[data.status,id]);json(res,q.rowCount?200:404,q.rows[0]||{error:'Not found'});return
   }
@@ -96,7 +96,7 @@ const server=http.createServer(async(req,res)=>{
    const items=[];for(const row of q.rows){let item=items.find(x=>x.id===row.id);if(!item){item={id:row.id,slug:row.slug,published:row.published,created_at:row.created_at,translations:{}};items.push(item)}if(row.lang)item.translations[row.lang]={title:row.title,body:row.body}}
    json(res,200,{items});return
   }
-  if(/^\\/api\\/admin\\/news\\/[a-f0-9-]+$/.test(url.pathname)&&req.method==='PUT'){
+  if(url.pathname.startsWith('/api/admin/news/')&&/^[a-f0-9-]{36}$/.test(url.pathname.slice('/api/admin/news/'.length))&&req.method==='PUT'){
    const id=url.pathname.split('/').pop(),d=await body(req);
    if(typeof d.published!=='boolean'){fail(res,400,'Invalid publication state');return}
    const q=await pool.query('UPDATE news_posts SET published=$1,updated_at=now() WHERE id=$2 RETURNING id,published',[d.published,id]);

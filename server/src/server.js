@@ -118,6 +118,22 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/admin/staff'&&req.method==='GET'){
    const q=await pool.query('SELECT id,username FROM admin_users WHERE active=true ORDER BY username');json(res,200,{items:q.rows});return
   }
+  if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/chat$/.test(url.pathname)){
+   const inquiryId=url.pathname.split('/')[4];
+   const actor=await pool.query('SELECT u.id,u.username FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.active=true',[tokenDigest(parseCookie(req.headers.cookie,'brill_session'))]);
+   if(!actor.rowCount){fail(res,401,'Unauthorized');return}
+   if(req.method==='GET'){
+    const exists=await pool.query('SELECT 1 FROM inquiries WHERE id=$1',[inquiryId]);if(!exists.rowCount){fail(res,404,'Not found');return}
+    const q=await pool.query("SELECT m.id,m.sender_kind,m.message,m.created_at,u.username AS employee FROM inquiry_chat_messages m LEFT JOIN admin_users u ON u.id=m.sender_id WHERE m.inquiry_id=$1 ORDER BY m.created_at,m.id LIMIT 200",[inquiryId]);
+    json(res,200,{items:q.rows});return
+   }
+   if(req.method==='POST'){
+    const data=await body(req),message=text(data.message,2000);
+    if(!message||message.length>2000){fail(res,400,'Invalid message');return}
+    const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,sender_id,message) SELECT $1,id,'employee',$3,$4 FROM inquiries WHERE id=$2 RETURNING id,created_at",[crypto.randomUUID(),inquiryId,actor.rows[0].id,message]);
+    json(res,q.rowCount?201:404,q.rowCount?{ok:true,...q.rows[0]}:{error:'Not found'});return
+   }
+  }
   if(url.pathname==='/api/admin/inquiries/overview'&&req.method==='GET'){
    const q=await pool.query(`SELECT
     count(*)::int AS total,

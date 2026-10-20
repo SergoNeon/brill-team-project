@@ -89,9 +89,35 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
    const q=await pool.query('SELECT id,name,email,message,status,created_at FROM inquiries ORDER BY created_at DESC LIMIT 100');json(res,200,{items:q.rows});return
   }
+  if(/^\/api\/admin\/inquiries\/[a-f0-9-]{36}\/activity$/.test(url.pathname)){
+   const id=url.pathname.split('/')[4];
+   if(req.method==='GET'){
+    const exists=await pool.query('SELECT 1 FROM inquiries WHERE id=$1',[id]);if(!exists.rowCount){fail(res,404,'Not found');return}
+    const q=await pool.query('SELECT id,action,actor_name,old_status,new_status,note,created_at FROM inquiry_activity WHERE inquiry_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200',[id]);json(res,200,{items:q.rows});return
+   }
+   if(req.method==='POST'){
+    const data=await body(req),note=text(data.note,2000);
+    if(!note||note.length>2000){fail(res,400,'Invalid note');return}
+    const actor=await pool.query('SELECT u.id,u.username FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[tokenDigest(parseCookie(req.headers.cookie,'brill_session'))]);
+    if(!actor.rowCount){fail(res,401,'Unauthorized');return}
+    const q=await pool.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,note) SELECT $1,id,$3,$4,'note',$5 FROM inquiries WHERE id=$2 RETURNING id",[crypto.randomUUID(),id,actor.rows[0].id,actor.rows[0].username,note]);json(res,q.rowCount?201:404,q.rowCount?{ok:true}:{error:'Not found'});return
+   }
+  }
   if(url.pathname.startsWith('/api/admin/inquiries/')&&/^[a-f0-9-]{36}$/.test(url.pathname.slice('/api/admin/inquiries/'.length))&&req.method==='PUT'){
    const data=await body(req);if(!['new','read','closed'].includes(data.status)){fail(res,400,'Invalid status');return}
-   const id=url.pathname.split('/').pop();const q=await pool.query('UPDATE inquiries SET status=$1 WHERE id=$2 RETURNING id,status',[data.status,id]);json(res,q.rowCount?200:404,q.rows[0]||{error:'Not found'});return
+   const id=url.pathname.split('/').pop(),client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const previous=await client.query('SELECT status FROM inquiries WHERE id=$1 FOR UPDATE',[id]);
+    if(!previous.rowCount){await client.query('ROLLBACK');fail(res,404,'Not found');return}
+    if(previous.rows[0].status!==data.status){
+     const actor=await client.query('SELECT u.id,u.username FROM admin_sessions s JOIN admin_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[tokenDigest(parseCookie(req.headers.cookie,'brill_session'))]);
+     if(!actor.rowCount){await client.query('ROLLBACK');fail(res,401,'Unauthorized');return}
+     await client.query('UPDATE inquiries SET status=$1 WHERE id=$2',[data.status,id]);
+     await client.query("INSERT INTO inquiry_activity(id,inquiry_id,actor_id,actor_name,action,old_status,new_status) VALUES($1,$2,$3,$4,'status',$5,$6)",[crypto.randomUUID(),id,actor.rows[0].id,actor.rows[0].username,previous.rows[0].status,data.status]);
+    }
+    await client.query('COMMIT');json(res,200,{id,status:data.status});
+   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}return
   }
   if(url.pathname==='/api/admin/content'&&req.method==='PUT'){
    const data=await body(req);const key=text(data.key,100),lang=data.lang,value=text(data.value,10000);

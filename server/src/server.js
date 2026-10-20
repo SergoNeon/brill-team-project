@@ -8,7 +8,7 @@ import { verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSes
 const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
 
-const origin=new URL(process.env.PUBLIC_ORIGIN).origin;
+const origins=new Set(process.env.PUBLIC_ORIGIN.split(',').map(value=>new URL(value.trim()).origin));
 const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='disable'?false:{rejectUnauthorized:true},max:5});
 const buckets=new Map();
 const MAX_BODY=16*1024;
@@ -19,10 +19,10 @@ function rateLimit(ip){const now=Date.now();if(buckets.size>10000){for(const [k,
 async function body(req){let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>MAX_BODY)throw Object.assign(new Error('Payload too large'),{status:413});chunks.push(c)}try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Object.assign(new Error('Invalid JSON'),{status:400})}}
 function text(v,max){return typeof v==='string'?v.trim().slice(0,max+1):''}
 function validLang(v){return ['ru','he','en'].includes(v)}
-function validOrigin(req){const requestOrigin=req.headers.origin;const renderOrigin=process.env.ADMIN_ORIGIN;return requestOrigin===origin||(req.url?.startsWith('/api/admin/')&&renderOrigin&&requestOrigin===renderOrigin)}
+function validOrigin(req){const requestOrigin=req.headers.origin;const renderOrigin=process.env.ADMIN_ORIGIN;return origins.has(requestOrigin)||(req.url?.startsWith('/api/admin/')&&renderOrigin&&requestOrigin===renderOrigin)}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
- if(req.headers.origin===origin){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
+ if(origins.has(req.headers.origin)){res.setHeader('access-control-allow-origin',req.headers.origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf');res.setHeader('access-control-allow-methods','GET,POST,PUT,DELETE,OPTIONS')}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
  if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}

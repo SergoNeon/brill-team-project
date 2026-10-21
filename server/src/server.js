@@ -426,7 +426,6 @@ const server=http.createServer(async(req,res)=>{
 });
 const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port));
 process.on('SIGTERM',()=>server.close(()=>pool.end()));
-,'i'));
    if(match){
     const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
     if(reply){

@@ -34,7 +34,7 @@ async function telegramSend(chatId,message){
   }finally{clearTimeout(timeout)}
  }catch(error){console.error('Telegram send unavailable:',error.name);return false}
 }
-function telegramNotice(message){if(telegramEnabled)void telegramSend(telegramChatId,message)}
+function telegramNotice(message){if(telegramEnabled&&telegramOwnerUserId)void telegramSend(telegramOwnerUserId,message)}
 
 const allowVisit=visitLimiter();
 const MAX_BODY=16*1024;
@@ -61,7 +61,7 @@ const server=http.createServer(async(req,res)=>{
   if(typeof supplied!=='string'||supplied.length!==telegramWebhookSecret.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
   const update=await body(req);
   const msg=update?.message;
-  if(msg?.text&&String(msg.chat?.id)===telegramChatId&&String(msg.from?.id)===telegramOwnerUserId&&telegramOwnerUserId&&telegramOwnerCrmUsername){
+  if(msg?.text&&msg.chat?.type==='private'&&String(msg.chat?.id)===telegramOwnerUserId&&String(msg.from?.id)===telegramOwnerUserId&&telegramOwnerUserId&&telegramOwnerCrmUsername){
    const actor=await pool.query('SELECT id FROM admin_users WHERE username=$1 AND active=true',[telegramOwnerCrmUsername]);
    if(actor.rowCount){
     const match=msg.text.match(/^[/]reply(?:@\\w+)?\\s+([a-f0-9-]{36})\\s+([\\s\\S]{1,2000})$/i);
@@ -69,9 +69,16 @@ const server=http.createServer(async(req,res)=>{
      const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
      if(reply){
       const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,sender_id,message) SELECT $1,id,'employee',$3,$4 FROM inquiries WHERE id=$2 RETURNING id",[crypto.randomUUID(),inquiryId,actor.rows[0].id,reply]);
-      await telegramSend(telegramChatId,q.rowCount?'Ответ клиенту сохранён в CRM.':'Обращение не найдено.');
+      await telegramSend(telegramOwnerUserId,q.rowCount?'Ответ клиенту сохранён в CRM.':'Обращение не найдено.');
      }
-    }else if(msg.text==='/start')await telegramSend(telegramChatId,'BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
+    }else if(msg.text==='/start')await telegramSend(telegramOwnerUserId,'BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
+   }
+  }
+  if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramChatId){
+   const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
+   if(command==='/start'||command==='/help'||command==='/services'||command==='/support'||command==='/request'){
+    const message=command==='/services'?'BRILL TEAM PROJECT: разработка сайтов, CRM и цифровых решений. Подробнее: https://brillteamp.com/':command==='/request'||command==='/support'?'Для личного обращения напишите боту в приватном чате: https://t.me/brillteamprojectbot':'Добро пожаловать в BRILL TEAM PROJECT! Услуги: /services. Обращение: /request. Поддержка: /support. Не публикуйте личные данные в группе.';
+    await telegramSend(msg.chat.id,message);
    }
   }
   json(res,200,{ok:true});return

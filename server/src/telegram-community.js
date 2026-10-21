@@ -116,7 +116,8 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
  const isAdmin=['administrator','creator'].includes(membership.status);
  const canChange=isAdmin&&(membership.status==='creator'||membership.can_change_info);
  const canPin=isAdmin&&(membership.status==='creator'||membership.can_pin_messages);
- log('Telegram community permissions: '+JSON.stringify({isAdmin,canChange:!!canChange,canPin:!!canPin}));
+ const canManageTopics=isAdmin&&(membership.status==='creator'||membership.can_manage_topics);
+ log('Telegram community permissions: '+JSON.stringify({isAdmin,canChange:!!canChange,canPin:!!canPin,canManageTopics:!!canManageTopics}));
  if(!isAdmin||!canChange||!canPin)throw new Error('Telegram community requires bot administrator, change-info and pin permissions');
  if(ownerUserId){const owner=await api('getChatMember',{chat_id:chatId,user_id:Number(ownerUserId)});if(!['administrator','creator'].includes(owner.status))throw new Error('Configured owner is not an administrator of the Telegram group');}
  const client=await pool.connect();let locked=false;
@@ -138,7 +139,8 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
 
    await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'configuration',configurationHash]);
   }
-  if(chat.is_forum){
+  if(chat.is_forum&&!canManageTopics)log('Telegram topic creation deferred: bot missing can_manage_topics permission');
+  if(chat.is_forum&&canManageTopics){
    for(const section of community.sections){
     const key='topic-'+section.key;
     const existing=(await client.query('SELECT message_id,status FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,key])).rows[0];

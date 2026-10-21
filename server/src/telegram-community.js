@@ -152,7 +152,7 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
     await api('sendMessage',{chat_id:chatId,message_thread_id:topic.message_thread_id,text:publicationText({translations:section.text}),disable_notification:true});
     log('Telegram forum topic ready: '+JSON.stringify({key,threadId:topic.message_thread_id}));
    }
-  }else log('Telegram forum topics pending: enable Topics in Telegram group settings');
+  }else if(!chat.is_forum)log('Telegram forum topics pending: forum mode disabled');
   const published=[];
   const posts=[...community.posts,...community.sections.map(s=>({key:'section-'+s.key,translations:Object.fromEntries(languages.map(lang=>[lang,s.text[lang]]))}))];
   for(const post of posts){
@@ -174,7 +174,8 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
     messageId=sent.message_id;
     await client.query("UPDATE telegram_community_publications SET message_id=$3,status='published',updated_at=now() WHERE chat_id=$1 AND publication_key=$2",[chatId,post.key,messageId]);
    }
-   if(post.pin)await api('pinChatMessage',{chat_id:chatId,message_id:Number(messageId),disable_notification:true});
+   if(post.pin&&!chat.is_forum)await api('pinChatMessage',{chat_id:chatId,message_id:Number(messageId),disable_notification:true});
+   if(post.pin&&chat.is_forum)log('Telegram legacy pin skipped in forum mode: '+messageId);
    published.push({key:post.key,messageId:Number(messageId)});
   }
   // Read back public configuration after applying it.
@@ -183,7 +184,7 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
   const groupCommands=await api('getMyCommands',{scope:{type:'chat',chat_id:chatId}});
   if(groupCommands.map(c=>c.command).sort().join(',')!=='help,request,sections,services,start,support')throw new Error('Telegram community commands verification failed');
   const pinned=published.find(p=>p.key==='welcome');
-  if(updated.pinned_message?.message_id!==pinned.messageId)throw new Error('Telegram community pinned message verification failed');
+  if(!updated.is_forum&&updated.pinned_message?.message_id!==pinned.messageId)throw new Error('Telegram community pinned message verification failed');
   const result={version:community.version,chatId:String(chatId),title:updated.title,username:updated.username||null,posts:published,pinnedMessageId:pinned.messageId};
   log('Telegram community ready: '+JSON.stringify(result));return result;
  }finally{

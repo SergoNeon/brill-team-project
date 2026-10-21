@@ -25,6 +25,15 @@ test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.en
   const created=await request.json();
   assert.match(created.chat_token,/^[A-Za-z0-9_-]{43}$/);
   const persisted=await pool.query('SELECT id,message FROM inquiries WHERE email=$1',[email]);assert.equal(persisted.rowCount,1);
+  const created=await request.json();assert.match(created.inquiry_id,/^[a-f0-9-]{36}$/);assert.match(created.chat_token,/^[A-Za-z0-9_-]{43}$/);
+  const chatUrl=origin+'/api/client/inquiries/'+created.inquiry_id+'/chat';
+  const clientHeaders={'x-brill-chat-token':created.chat_token};
+  const noToken=await fetch(chatUrl);assert.equal(noToken.status,401);
+  const wrongToken=await fetch(chatUrl,{headers:{'x-brill-chat-token':crypto.randomBytes(32).toString('base64url')}});assert.equal(wrongToken.status,403);
+  const clientPost=await fetch(chatUrl,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...clientHeaders},body:JSON.stringify({message:'Client E2E test message'})});assert.equal(clientPost.status,201,await clientPost.text());
+  const clientRead=await fetch(chatUrl,{headers:clientHeaders});assert.equal(clientRead.status,200);assert.ok((await clientRead.json()).items.some(m=>m.message==='Client E2E test message'));
+  const anonEmployee=await fetch(origin+'/api/admin/inquiries/'+created.inquiry_id+'/chat');assert.equal(anonEmployee.status,401);
+
   const inquiryId=created.inquiry_id;
   const clientUrl=origin+'/api/client/inquiries/'+inquiryId+'/chat';
   const clientHeaders={'x-brill-chat-token':created.chat_token};
@@ -40,6 +49,12 @@ test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.en
   assert.equal(login.status,200,await login.text());
   const cookie=login.headers.get('set-cookie');assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);
   const inbox=await fetch(origin+'/api/admin/inquiries',{headers:{Cookie:cookie.split(';')[0]}});assert.equal(inbox.status,200);
+  const employeeUrl=origin+'/api/admin/inquiries/'+created.inquiry_id+'/chat';
+  const employeePost=await fetch(employeeUrl,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',Cookie:cookie.split(';')[0]},body:JSON.stringify({message:'Employee E2E test reply'})});assert.equal(employeePost.status,201,await employeePost.text());
+  const reopen=await fetch(chatUrl,{headers:clientHeaders});assert.equal(reopen.status,200);
+  const history=(await reopen.json()).items;assert.ok(history.some(m=>m.sender_kind==='client'&&m.message==='Client E2E test message'));assert.ok(history.some(m=>m.sender_kind==='employee'&&m.message==='Employee E2E test reply'));
+  const foreignRead=await fetch(chatUrl,{headers:{'x-brill-chat-token':crypto.randomBytes(32).toString('base64url')}});assert.equal(foreignRead.status,403);
+
   const data=await inbox.json();assert.ok(data.items.some(x=>x.email===email));
   const employeeUrl=origin+'/api/admin/inquiries/'+inquiryId+'/chat';
   const employeeSend=await fetch(employeeUrl,{method:'POST',headers:{Origin:origin,Cookie:cookie.split(';')[0],'x-brill-csrf':'1','Content-Type':'application/json'},body:JSON.stringify({message:'QA employee reply'})});

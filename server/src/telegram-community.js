@@ -13,7 +13,7 @@ export function selectedTelegramGroup(message,ownerId){
  return String(shared.chat_id);
 }
 export function isAuthorizedCommunityStart(message,ownerId){
- return !!ownerId&&typeof message?.text==='string'&&['group','supergroup'].includes(message.chat?.type)&&String(message.from?.id)===String(ownerId)&&typeof message.chat?.title==='string'&&message.chat.title.normalize('NFKC').trim().toLowerCase()===community.groupTitle.toLowerCase()&&/^\/start(?:@\w+)?(?:\s|$)/i.test(message.text);
+ return !!ownerId&&typeof message?.text==='string'&&['group','supergroup'].includes(message.chat?.type)&&String(message.from?.id)===String(ownerId)&&typeof message.chat?.title==='string'&&message.chat.title.normalize('NFKC').trim().toLowerCase()===community.groupTitle.toLowerCase()&&(/^(?:\/start|\/help)(?:@brillteamprojectbot)?(?:\s|$)/i.test(message.text)||message.text.trim().length>0);
 }
 export function publicTelegramAnswer(command,language='ru'){
  const lang=/^(he|iw)(-|$)/i.test(language)?'he':/^en(-|$)/i.test(language)?'en':'ru';

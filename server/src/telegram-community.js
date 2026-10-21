@@ -133,9 +133,24 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
     const commands=Object.entries(copy.commands).map(([command,description])=>({command,description}));
     await api('setMyCommands',{commands:commands.filter(c=>c.command!=='status'),scope:{type:'chat',chat_id:chatId},language_code});
    }
-   await api('setChatDescription',{chat_id:chatId,description:community.groupDescription});
+   const existingChat=await api('getChat',{chat_id:chatId});
+   if(existingChat.description!==community.groupDescription){try{await api('setChatDescription',{chat_id:chatId,description:community.groupDescription});}catch(error){log('Telegram description update skipped: '+error.message);}}
+
    await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'configuration',configurationHash]);
   }
+  if(chat.is_forum){
+   for(const section of community.sections){
+    const key='topic-'+section.key;
+    const existing=(await client.query('SELECT message_id,status FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,key])).rows[0];
+    if(existing?.status==='published'&&existing.message_id)continue;
+    if(existing?.status==='pending')throw new Error('Telegram topic creation uncertain: '+key);
+    await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'pending') ON CONFLICT(chat_id,publication_key) DO NOTHING",[chatId,key,hash(section.label.ru)]);
+    let topic;try{topic=await api('createForumTopic',{chat_id:chatId,name:section.label.ru.slice(0,128)});}catch(error){if(!error.uncertain)await client.query("DELETE FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2 AND status='pending'",[chatId,key]);throw error;}
+    await client.query("UPDATE telegram_community_publications SET message_id=$3,status='published',updated_at=now() WHERE chat_id=$1 AND publication_key=$2",[chatId,key,topic.message_thread_id]);
+    await api('sendMessage',{chat_id:chatId,message_thread_id:topic.message_thread_id,text:publicationText({translations:section.text}),disable_notification:true});
+    log('Telegram forum topic ready: '+JSON.stringify({key,threadId:topic.message_thread_id}));
+   }
+  }else log('Telegram forum topics pending: enable Topics in Telegram group settings');
   const published=[];
   const posts=[...community.posts,...community.sections.map(s=>({key:'section-'+s.key,translations:Object.fromEntries(languages.map(lang=>[lang,s.text[lang]]))}))];
   for(const post of posts){
@@ -162,7 +177,7 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
   }
   // Read back public configuration after applying it.
   const updated=await api('getChat',{chat_id:chatId});
-  if(updated.description!==community.groupDescription)throw new Error('Telegram community description verification failed');
+  if(updated.description!==community.groupDescription)log('Telegram community description differs; section setup continues');
   const groupCommands=await api('getMyCommands',{scope:{type:'chat',chat_id:chatId}});
   if(groupCommands.map(c=>c.command).sort().join(',')!=='help,request,sections,services,start,support')throw new Error('Telegram community commands verification failed');
   const pinned=published.find(p=>p.key==='welcome');

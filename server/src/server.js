@@ -60,7 +60,7 @@ const server=http.createServer(async(req,res)=>{
   const update=await body(req);
   const msg=update?.message;
   if(msg?.text&&String(msg.chat?.id)===telegramChatId){
-   const match=msg.text.match(new RegExp('^/reply(?:@\\\\w+)?\\\\s+([a-f0-9-]{36})\\\\s+([\\\\s\\\\S]{1,2000})
+   const match=msg.text.match(/^[/]reply(?:@\w+)?\s+([a-f0-9-]{36})\s+([\s\S]{1,2000})/i);
    if(match){
     const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
     if(reply){

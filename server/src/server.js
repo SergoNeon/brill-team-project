@@ -89,6 +89,18 @@ const server=http.createServer(async(req,res)=>{
     }else if(msg.text==='/start')await telegramSend(telegramOwnerUserId,'BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
    }
   }
+  if(msg?.text&&msg.chat?.type==='private'&&String(msg.chat?.id)!==telegramOwnerUserId){
+   const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
+   const answers={
+    '/start':'Здравствуйте! BRILL TEAM PROJECT. Услуги: /services. Оставить заявку: /request. Поддержка: /support. Не отправляйте пароли или платёжные данные.',
+    '/help':'Команды: /services, /request, /support. Личные заявки оформляются на сайте BRILL TEAM.',
+    '/services':'Разработка сайтов, CRM и цифровых решений: https://brillteamp.com/',
+    '/request':'Для защищённой заявки и личного чата откройте https://brillteamp.com/',
+    '/support':'Поддержка и личные обращения: https://brillteamp.com/',
+    '/status':'Статус обращения доступен через приватную ссылку, выданную после оформления заявки на сайте.'
+   };
+   if(answers[command])await telegramSend(msg.chat.id,answers[command]);
+  }
   if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramChatId){
    const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
    if(command==='/start'||command==='/help'||command==='/services'||command==='/support'||command==='/request'){

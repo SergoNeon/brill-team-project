@@ -18,6 +18,8 @@ export function isAuthorizedCommunityStart(message,ownerId){
 export function publicTelegramAnswer(command,language='ru'){
  const lang=/^(he|iw)(-|$)/i.test(language)?'he':/^en(-|$)/i.test(language)?'en':'ru';
  const copy=community.languages[lang];
+ if(command==='/sections')return community.sections.map((section,i)=>(i+1)+'. '+section.label[lang]+' — /section_'+section.key).join('\n')+'\n\n'+community.siteUrl;
+ const section=community.sections.find(s=>command==='/section_'+s.key);if(section)return section.text[lang];
  if(command==='/services')return copy.directions+'\n\n'+community.siteUrl;
  if(command==='/request'||command==='/support')return copy.request;
  if(command==='/status')return copy.status;
@@ -135,7 +137,8 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
    await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'configuration',configurationHash]);
   }
   const published=[];
-  for(const post of community.posts){
+  const posts=[...community.posts,...community.sections.map(s=>({key:'section-'+s.key,translations:Object.fromEntries(languages.map(lang=>[lang,s.text[lang]]))}))];
+  for(const post of posts){
    const text=publicationText(post),digest=hash(text);
    const existing=(await client.query('SELECT status,content_hash,message_id FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,post.key])).rows[0];
    let messageId=existing?.message_id;

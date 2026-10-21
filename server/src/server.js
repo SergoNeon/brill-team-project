@@ -114,7 +114,7 @@ const server=http.createServer(async(req,res)=>{
   }
   if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramGroupId){
    const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
-   if(command==='/start'||command==='/help'||command==='/services'||command==='/support'||command==='/request'){
+   if(command==='/start'||command==='/help'||command==='/services'||command==='/sections'||command.startsWith('/section_')||command==='/support'||command==='/request'){
     const message=command==='/request'||command==='/support'?'Личное обращение · פנייה אישית · Private inquiry: https://t.me/brillteamprojectbot':publicTelegramAnswer(command,msg.from?.language_code);
     await telegramSend(msg.chat.id,message);
    }

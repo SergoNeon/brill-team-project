@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS admin_users (
  password_hash text NOT NULL, active boolean NOT NULL DEFAULT true,
  created_at timestamptz NOT NULL DEFAULT now()
 );
+-- Required by the current inquiry inbox and assignment routes. Keep this
+-- idempotent so existing databases can apply the schema without losing records.
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS assigned_to uuid REFERENCES admin_users(id);
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS priority varchar(10) NOT NULL DEFAULT 'normal'
+ CHECK(priority IN ('low','normal','high','urgent'));
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS due_at timestamptz;
 CREATE TABLE IF NOT EXISTS admin_sessions (
  token_hash char(64) PRIMARY KEY,
  user_id uuid NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,

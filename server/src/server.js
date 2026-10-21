@@ -47,7 +47,7 @@ const server=http.createServer(async(req,res)=>{
    const hash=crypto.createHash('sha256').update(token).digest('hex');
    const allowed=await pool.query('SELECT 1 FROM inquiry_client_access WHERE inquiry_id=$1 AND token_hash=$2',[inquiryId,hash]);
    if(!allowed.rowCount){fail(res,403,'Chat access denied');return}
-   if(req.method==='GET'){const q=await pool.query("SELECT id,sender_kind,message,created_at FROM inquiry_chat_messages WHERE inquiry_id=$1 ORDER BY created_at,id LIMIT 200",[inquiryId]);json(res,200,{items:q.rows});return}
+   if(req.method==='GET'){const q=await pool.query("SELECT id,sender_kind,message,created_at FROM (SELECT id,sender_kind,message,created_at FROM inquiry_chat_messages WHERE inquiry_id=$1 ORDER BY created_at DESC,id DESC LIMIT 200) latest ORDER BY created_at,id",[inquiryId]);json(res,200,{items:q.rows});return}
    if(!rateLimit('chat:'+inquiryId+':'+(req.socket.remoteAddress||'unknown'))){fail(res,429,'Too many messages');return}
    const data=await body(req),message=text(data.message,2000);
    if(!message||message.length>2000){fail(res,400,'Invalid message');return}

@@ -6,7 +6,7 @@ const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
 const activationHtml=readFileSync(new URL('./activate.html',import.meta.url),'utf8');
 import { Pool } from 'pg';
 import { hashPassword, verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
-import {community,publicTelegramAnswer,setupTelegramCommunity} from './telegram-community.js';
+import {community,isAuthorizedCommunityStart,publicTelegramAnswer,setupTelegramCommunity} from './telegram-community.js';
 
 const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
@@ -20,6 +20,13 @@ const telegramWebhookSecret=process.env.TELEGRAM_WEBHOOK_SECRET?crypto.createHas
 const telegramEnabled=Boolean(telegramToken&&telegramChatId&&telegramWebhookSecret);
 const telegramOwnerUserId=process.env.TELEGRAM_OWNER_USER_ID||'';
 const telegramOwnerCrmUsername=process.env.TELEGRAM_OWNER_CRM_USERNAME||'';
+let telegramGroupId=process.env.TELEGRAM_PUBLIC_GROUP_ID||'';
+let communitySetupTask;
+function scheduleCommunitySetup(chatId=telegramGroupId||telegramChatId){
+ if(communitySetupTask)return communitySetupTask;
+ communitySetupTask=setupTelegramCommunity(pool,{token:telegramToken,chatId,ownerUserId:telegramOwnerUserId}).then(result=>{if(result.chatId)telegramGroupId=result.chatId;return result}).catch(error=>console.error('Telegram community setup stopped:',error.message)).finally(()=>{communitySetupTask=null});
+ return communitySetupTask;
+}
 async function telegramSend(chatId,message){
  if(!telegramEnabled)return false;
  try{
@@ -78,6 +85,7 @@ const server=http.createServer(async(req,res)=>{
   if(typeof supplied!=='string'||Buffer.byteLength(supplied)!==Buffer.byteLength(telegramWebhookSecret)||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
   const update=await body(req);
   const msg=update?.message;
+  if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version&&isAuthorizedCommunityStart(msg,telegramOwnerUserId))void scheduleCommunitySetup(String(msg.chat.id));
   if(msg?.text&&msg.chat?.type==='private'&&String(msg.chat?.id)===telegramOwnerUserId&&String(msg.from?.id)===telegramOwnerUserId&&telegramOwnerUserId&&telegramOwnerCrmUsername){
    const actor=await pool.query('SELECT id FROM admin_users WHERE username=$1 AND active=true',[telegramOwnerCrmUsername]);
    if(actor.rowCount){
@@ -96,7 +104,7 @@ const server=http.createServer(async(req,res)=>{
    const answer=publicTelegramAnswer(command,msg.from?.language_code);
    if(answer)await telegramSend(msg.chat.id,answer);
   }
-  if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramChatId){
+  if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramGroupId){
    const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
    if(command==='/start'||command==='/help'||command==='/services'||command==='/support'||command==='/request'){
     const message=command==='/request'||command==='/support'?'Личное обращение · פנייה אישית · Private inquiry: https://t.me/brillteamprojectbot':publicTelegramAnswer(command,msg.from?.language_code);
@@ -454,5 +462,5 @@ const server=http.createServer(async(req,res)=>{
   fail(res,404,'Not found');
  }catch(e){if(e.status){fail(res,e.status,e.message)}else{console.error('Request failed:',e.code||e.message);fail(res,e.code==='23505'?409:500,'Server error')}}
 });
-const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook();if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version)void setupTelegramCommunity(pool,{token:telegramToken,chatId:telegramChatId}).catch(error=>console.error('Telegram community setup stopped:',error.message))});
+const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook();if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version)void scheduleCommunitySetup()});
 process.on('SIGTERM',()=>server.close(()=>pool.end()));

@@ -5,6 +5,9 @@ export const community=JSON.parse(readFileSync(new URL('../content/telegram-comm
 const languages=['ru','he','en'];
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
 export const publicationText=post=>languages.map(lang=>post.translations?.[lang]||community.languages[lang][post.source]).join('\n\n');
+export function isAuthorizedCommunityStart(message,ownerId){
+ return !!ownerId&&typeof message?.text==='string'&&['group','supergroup'].includes(message.chat?.type)&&String(message.from?.id)===String(ownerId)&&typeof message.chat?.title==='string'&&message.chat.title.normalize('NFKC').trim().toLowerCase()===community.groupTitle.toLowerCase()&&/^\/start(?:@\w+)?(?:\s|$)/i.test(message.text);
+}
 export function publicTelegramAnswer(command,language='ru'){
  const lang=/^(he|iw)(-|$)/i.test(language)?'he':/^en(-|$)/i.test(language)?'en':'ru';
  const copy=community.languages[lang];
@@ -22,19 +25,65 @@ export const communityTable=`CREATE TABLE IF NOT EXISTS telegram_community_publi
  updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(chat_id,publication_key)
 )`;
 
-export async function setupTelegramCommunity(pool,{token,chatId,fetchApi=globalThis.fetch,log=console.log}={}){
- if(!token||!chatId)throw new Error('Telegram community configuration missing');
- async function api(method,params={}){
+function telegramApi(token,fetchApi){
+ return async function api(method,params={}){
   let response;
   try{response=await fetchApi('https://api.telegram.org/bot'+token+'/'+method,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(params),signal:AbortSignal.timeout(12000)});}
   catch{throw Object.assign(new Error('Telegram '+method+' outcome unknown'),{method,uncertain:true});}
   let result;try{result=await response.json();}catch{throw Object.assign(new Error('Telegram '+method+' response unreadable'),{method,uncertain:true});}
   if(!response.ok||!result.ok)throw Object.assign(new Error('Telegram '+method+' failed ('+(result.error_code||response.status)+')'),{method,uncertain:response.status>=500});
   return result.result;
+ };
+}
+
+export async function setupTelegramBotProfile(pool,{token,fetchApi=globalThis.fetch,log=console.log}={}){
+ if(!token)throw new Error('Telegram bot token missing');
+ const api=telegramApi(token,fetchApi),me=await api('getMe');
+ if(me.username?.toLowerCase()!==community.botUsername)throw new Error('Telegram bot does not match the authorized username');
+ const client=await pool.connect(),chatId='bot:'+me.id;let locked=false;
+ try{
+  await client.query(communityTable);
+  locked=(await client.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS acquired',['brill-telegram-profile:'+me.id])).rows[0].acquired;
+  if(!locked)throw new Error('Telegram bot profile setup already running');
+  const digest=hash(JSON.stringify(community.languages));
+  const existing=(await client.query('SELECT status,content_hash,message_id FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,'profile'])).rows[0];
+  if(existing?.content_hash!==digest||existing?.status!=='published'){
+   for(const language_code of ['',...languages]){
+    const copy=community.languages[language_code||'ru'];
+    const commands=Object.entries(copy.commands).map(([command,description])=>({command,description}));
+    await api('setMyCommands',{commands,scope:{type:'default'},language_code});
+    await api('setMyCommands',{commands,scope:{type:'all_private_chats'},language_code});
+    await api('setMyDescription',{description:copy.description,language_code});
+    await api('setMyShortDescription',{short_description:copy.shortDescription,language_code});
+   }
+   await api('setChatMenuButton',{menu_button:{type:'commands'}});
+   await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'profile',digest]);
+  }
+  const commands=await api('getMyCommands',{scope:{type:'default'}});
+  const description=await api('getMyDescription'),short=await api('getMyShortDescription');
+  if(commands.map(c=>c.command).sort().join(',')!=='help,request,services,start,status,support'||description.description!==community.languages.ru.description||short.short_description!==community.languages.ru.shortDescription)throw new Error('Telegram bot profile verification failed');
+  log('Telegram bot profile ready: '+JSON.stringify({bot:me.username,languages,commands:commands.map(c=>c.command),version:community.version}));
+  return me;
+ }finally{try{if(locked)await client.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',['brill-telegram-profile:'+me.id]);}finally{client.release();}}
+}
+
+export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetchApi=globalThis.fetch,log=console.log}={}){
+ if(!token||!chatId)throw new Error('Telegram community configuration missing');
+ const api=telegramApi(token,fetchApi);
+ const me=await setupTelegramBotProfile(pool,{token,fetchApi,log});
+ const known=await pool.query("SELECT chat_id FROM telegram_community_publications WHERE publication_key='target' AND status='published' ORDER BY updated_at DESC LIMIT 2");
+ if(known.rows.length>1)throw new Error('Telegram community has more than one saved group');
+ if(known.rows.length){
+  if(String(chatId).startsWith('-')&&String(chatId)!==known.rows[0].chat_id)throw new Error('Telegram group differs from the previously authorized group');
+  chatId=known.rows[0].chat_id;
  }
- // Resolve the recipient before any Telegram writes or publication reservations.
- const me=await api('getMe'),chat=await api('getChat',{chat_id:chatId});
+ // Resolve the group before group writes or publication reservations.
+ const chat=await api('getChat',{chat_id:chatId});
  log('Telegram community target: '+JSON.stringify({bot:me.username,title:chat.title,type:chat.type,isForum:!!chat.is_forum}));
+ if(chat.type==='private'){
+  log('Telegram community waiting for group: '+JSON.stringify({configuredChatType:'private',ownerBindingConfigured:!!ownerUserId,groupPostsSent:false}));
+  return {waitingForGroup:true,bot:me.username,ownerBindingConfigured:!!ownerUserId};
+ }
  if(me.username?.toLowerCase()!==community.botUsername||!['group','supergroup'].includes(chat.type)||String(chat.id)!==String(chatId)||chat.title?.normalize('NFKC').trim().toLowerCase()!==community.groupTitle.toLowerCase())throw new Error('Telegram community recipient does not match the authorized group and bot');
  const membership=await api('getChatMember',{chat_id:chatId,user_id:me.id});
  const isAdmin=['administrator','creator'].includes(membership.status);
@@ -42,24 +91,21 @@ export async function setupTelegramCommunity(pool,{token,chatId,fetchApi=globalT
  const canPin=isAdmin&&(membership.status==='creator'||membership.can_pin_messages);
  log('Telegram community permissions: '+JSON.stringify({isAdmin,canChange:!!canChange,canPin:!!canPin}));
  if(!isAdmin||!canChange||!canPin)throw new Error('Telegram community requires bot administrator, change-info and pin permissions');
+ if(ownerUserId){const owner=await api('getChatMember',{chat_id:chatId,user_id:Number(ownerUserId)});if(!['administrator','creator'].includes(owner.status))throw new Error('Configured owner is not an administrator of the Telegram group');}
  const client=await pool.connect();let locked=false;
  try{
   await client.query(communityTable);
   locked=(await client.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS acquired',['brill-telegram-community:'+chatId])).rows[0].acquired;
   if(!locked)throw new Error('Telegram community publication already running');
+  await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'target',hash('authorized-group:'+chatId)]);
   const configurationHash=hash(JSON.stringify(community));
   const configuration=await client.query('SELECT status,content_hash,message_id FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,'configuration']);
   if(configuration.rows[0]?.content_hash!==configurationHash||configuration.rows[0]?.status!=='published'){
    for(const language_code of ['',...languages]){
     const copy=community.languages[language_code||'ru'];
     const commands=Object.entries(copy.commands).map(([command,description])=>({command,description}));
-    await api('setMyCommands',{commands,scope:{type:'default'},language_code});
-    await api('setMyCommands',{commands,scope:{type:'all_private_chats'},language_code});
     await api('setMyCommands',{commands:commands.filter(c=>c.command!=='status'),scope:{type:'chat',chat_id:chatId},language_code});
-    await api('setMyDescription',{description:copy.description,language_code});
-    await api('setMyShortDescription',{short_description:copy.shortDescription,language_code});
    }
-   await api('setChatMenuButton',{menu_button:{type:'commands'}});
    await api('setChatDescription',{chat_id:chatId,description:community.groupDescription});
    await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'published') ON CONFLICT(chat_id,publication_key) DO UPDATE SET content_hash=EXCLUDED.content_hash,status='published',updated_at=now()",[chatId,'configuration',configurationHash]);
   }
@@ -93,7 +139,7 @@ export async function setupTelegramCommunity(pool,{token,chatId,fetchApi=globalT
   if(groupCommands.map(c=>c.command).sort().join(',')!=='help,request,services,start,support')throw new Error('Telegram community commands verification failed');
   const pinned=published.find(p=>p.key==='welcome');
   if(updated.pinned_message?.message_id!==pinned.messageId)throw new Error('Telegram community pinned message verification failed');
-  const result={version:community.version,title:updated.title,username:updated.username||null,posts:published,pinnedMessageId:pinned.messageId};
+  const result={version:community.version,chatId:String(chatId),title:updated.title,username:updated.username||null,posts:published,pinnedMessageId:pinned.messageId};
   log('Telegram community ready: '+JSON.stringify(result));return result;
  }finally{
   try{if(locked)await client.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',['brill-telegram-community:'+chatId]);}finally{client.release();}

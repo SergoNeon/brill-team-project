@@ -28,7 +28,7 @@ jobs:
           test -n "$DATABASE_URL" || { echo "Missing QA_DATABASE_URL"; exit 1; }
           test -n "$ADMIN_TEST_PASSWORD" || { echo "Missing QA_ADMIN_TEST_PASSWORD"; exit 1; }
           test "${#ADMIN_TEST_PASSWORD}" -ge 12 || { echo "QA password too short"; exit 1; }
-          node -e 'const u=new URL(process.env.DATABASE_URL);if(!["postgres:","postgresql:"].includes(u.protocol)||u.pathname!=="/brillteam"||!u.hostname.includes("ep-crimson-bar-b991w1yw")){throw Error("Unexpected QA database target")};console.log("QA target hostname verified")'
+          node -e 'const u=new URL(process.env.DATABASE_URL);if(!["postgres:","postgresql:"].includes(u.protocol)||u.pathname!=="/brillteam"||!u.hostname.endsWith(".neon.tech")){throw Error("Unexpected QA database target")};console.log("Neon connection URL format verified; dedicated QA marker enforced by test")'
       - name: Install API dependencies
         working-directory: server
         run: npm install --no-audit --no-fund

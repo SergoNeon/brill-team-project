@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {publicPushKey,isVisitPayload,visitLimiter,notifyVisit,validSubscription} from './visit-notifications.js';
 import crypto from 'node:crypto';
 import { readFileSync } from 'node:fs';
 const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
@@ -12,6 +13,7 @@ for(const k of required) if(!process.env[k]) throw new Error('Missing required e
 const origins=new Set(process.env.PUBLIC_ORIGIN.split(',').map(value=>new URL(value.trim()).origin));
 const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='disable'?false:{rejectUnauthorized:true},max:5});
 const buckets=new Map();
+const allowVisit=visitLimiter();
 const MAX_BODY=16*1024;
 function json(res,status,data){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(data))}
 function fail(res,status,error){json(res,status,{error})}
@@ -26,12 +28,21 @@ const server=http.createServer(async(req,res)=>{
  if(origins.has(req.headers.origin)){res.setHeader('access-control-allow-origin',req.headers.origin);res.setHeader('vary','Origin');res.setHeader('access-control-allow-credentials','true');res.setHeader('access-control-allow-headers','content-type,x-brill-csrf,x-brill-chat-token');res.setHeader('access-control-allow-methods','GET,POST,PUT,PATCH,DELETE,OPTIONS')}
  if(['/api/news','/api/catalog'].includes(url.pathname)&&req.method==='GET'){const origin=req.headers.origin;if(origins.has(origin)){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin')}}
  if(req.method==='OPTIONS'){res.writeHead(validOrigin(req)?204:403);res.end();return}
- if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
- if(url.pathname==='/admin/activate'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(activationHtml);return}
+ if(url.pathname==='/admin'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; worker-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(adminHtml);return}
+ if(url.pathname==='/admin/activate'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; worker-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(activationHtml);return}
+ if(url.pathname==='/admin/push-worker.js'&&req.method==='GET'){res.writeHead(200,{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','service-worker-allowed':'/admin/','x-content-type-options':'nosniff'});res.end("self.addEventListener('push',event=>{const d=event.data?.json()||{};event.waitUntil(self.registration.showNotification(d.title||'BRILL TEAM',{body:d.body||'',tag:d.tag||'visit',data:{url:'/admin'}}))});self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.openWindow('/admin'))});");return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}
  if(!url.pathname.startsWith('/api/')){fail(res,404,'Not found');return}
  if(req.method!=='GET'&&!validOrigin(req)){fail(res,403,'Origin not allowed');return}
  try{
+  if(url.pathname==='/api/visits'&&req.method==='POST'){
+   const data=await body(req);
+   if(!isVisitPayload(data)){fail(res,400,'Invalid visit');return}
+   const ip=req.socket.remoteAddress||'unknown';
+   const key=crypto.createHash('sha256').update(ip+'|'+(req.headers['user-agent']||'').slice(0,200)+'|'+data.path).digest('hex');
+   if(allowVisit(key))void notifyVisit(pool,{path:data.path,referrer:data.referrer}).catch(e=>console.error('Visit notification failed:',e.message));
+   json(res,202,{ok:true});return
+  }
   if(url.pathname==='/api/inquiries'&&req.method==='POST'){
    const ip=req.socket.remoteAddress||'unknown';if(!rateLimit(ip)){fail(res,429,'Too many requests');return}
    const data=await body(req);if(data.website){json(res,202,{ok:true});return}
@@ -165,6 +176,12 @@ const server=http.createServer(async(req,res)=>{
     FROM admin_users u LEFT JOIN inquiries i ON i.assigned_to=u.id
     WHERE u.active=true GROUP BY u.id,u.username ORDER BY active DESC,u.username LIMIT 100`);
    json(res,200,{summary:q.rows[0],employees:employees.rows});return
+  }
+  if(url.pathname==='/api/admin/push-config'&&req.method==='GET'){json(res,200,{publicKey:publicPushKey});return}
+  if(url.pathname==='/api/admin/push-subscriptions'&&req.method==='POST'){
+   if(!publicPushKey){fail(res,503,'Push not configured');return}
+   const subscription=await body(req);if(!validSubscription(subscription)){fail(res,400,'Invalid subscription');return}
+   await pool.query('INSERT INTO visit_push_subscriptions(endpoint,p256dh,auth) VALUES($1,$2,$3) ON CONFLICT(endpoint) DO UPDATE SET p256dh=EXCLUDED.p256dh,auth=EXCLUDED.auth',[subscription.endpoint,subscription.keys.p256dh,subscription.keys.auth]);json(res,201,{ok:true});return
   }
   if(url.pathname==='/api/admin/inquiries'&&req.method==='GET'){
    const q=await pool.query('SELECT i.id,i.name,i.email,i.message,i.status,i.created_at,i.assigned_to,i.priority,i.due_at,u.username AS assignee_name FROM inquiries i LEFT JOIN admin_users u ON u.id=i.assigned_to ORDER BY i.created_at DESC LIMIT 100');json(res,200,{items:q.rows});return

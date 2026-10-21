@@ -57,3 +57,11 @@ CREATE TABLE IF NOT EXISTS inquiry_chat_messages (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS inquiry_chat_history_idx ON inquiry_chat_messages(inquiry_id,created_at,id);
+
+-- Admin opt-in browser push subscriptions; never store visitor identifiers.
+CREATE TABLE IF NOT EXISTS visit_push_subscriptions (
+ endpoint text PRIMARY KEY,
+ p256dh text NOT NULL,
+ auth text NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+);

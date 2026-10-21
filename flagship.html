@@ -98,6 +98,7 @@ async function loadClientChat(){if(!clientAccess||document.hidden)return;try{con
 document.getElementById("clientChatForm").addEventListener("submit",async e=>{e.preventDefault();const button=document.getElementById("clientChatSend"),input=document.getElementById("clientChatInput");button.disabled=true;try{await clientRequest("POST",input.value.trim());input.value="";await loadClientChat()}catch(err){document.getElementById("clientChatStatus").textContent=err.status===429?chatLocale().rateError:chatLocale().sendError}finally{button.disabled=false}});
 const clientHash=location.hash.match(/^#chat=([a-f0-9-]{36})\.([A-Za-z0-9_-]{43})$/);if(clientHash)openClientChat(clientHash[1],clientHash[2]);setInterval(()=>{if(clientAccess&&!document.hidden)loadClientChat()},15000);
 document.querySelectorAll("[data-lang]").forEach(el=>el.addEventListener("click",()=>{updateChatLanguage();if(clientAccess)loadClientChat()}));
+if(apiBase&&!navigator.webdriver){fetch(apiBase+"/api/visits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:location.pathname,referrer:document.referrer.slice(0,250)}),keepalive:true}).catch(()=>{});}
 contactForm.addEventListener("submit",async e=>{
  e.preventDefault();
  const t=copy[document.documentElement.lang]||copy.ru;

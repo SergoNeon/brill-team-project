@@ -1,0 +1,39 @@
+name: Isolated QA chat end-to-end
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brill-team-qa-chat-e2e
+  cancel-in-progress: false
+
+jobs:
+  qa-chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: qa
+    env:
+      DATABASE_URL: ${{ secrets.QA_DATABASE_URL }}
+      ADMIN_TEST_PASSWORD: ${{ secrets.QA_ADMIN_TEST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Validate isolated QA configuration
+        shell: bash
+        run: |
+          test -n "$DATABASE_URL" || { echo "Missing QA_DATABASE_URL"; exit 1; }
+          test -n "$ADMIN_TEST_PASSWORD" || { echo "Missing QA_ADMIN_TEST_PASSWORD"; exit 1; }
+          test "${#ADMIN_TEST_PASSWORD}" -ge 12 || { echo "QA password too short"; exit 1; }
+          node -e 'const u=new URL(process.env.DATABASE_URL);if(!["postgres:","postgresql:"].includes(u.protocol)||u.pathname!=="/brillteam"||!u.hostname.includes("ep-crimson-bar-b991w1yw")){throw Error("Unexpected QA database target")};console.log("QA target hostname verified")'
+      - name: Install API dependencies
+        working-directory: server
+        run: npm ci --no-audit --no-fund
+      - name: Run complete isolated HTTP chat scenario
+        working-directory: server
+        run: node --test test/http-neon.test.js

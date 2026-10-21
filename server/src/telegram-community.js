@@ -40,7 +40,7 @@ function telegramApi(token,fetchApi){
   try{response=await fetchApi('https://api.telegram.org/bot'+token+'/'+method,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(params),signal:AbortSignal.timeout(12000)});}
   catch{throw Object.assign(new Error('Telegram '+method+' outcome unknown'),{method,uncertain:true});}
   let result;try{result=await response.json();}catch{throw Object.assign(new Error('Telegram '+method+' response unreadable'),{method,uncertain:true});}
-  if(!response.ok||!result.ok)throw Object.assign(new Error('Telegram '+method+' failed ('+(result.error_code||response.status)+')'),{method,uncertain:response.status>=500});
+  if(!response.ok||!result.ok)throw Object.assign(new Error('Telegram '+method+' failed ('+(result.error_code||response.status)+'): '+String(result.description||'unknown').slice(0,240)),{method,uncertain:response.status>=500});
   return result.result;
  };
 }

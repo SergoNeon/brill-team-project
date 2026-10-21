@@ -87,7 +87,7 @@ export async function setupTelegramBotProfile(pool,{token,fetchApi=globalThis.fe
   }
   const commands=await api('getMyCommands',{scope:{type:'default'}});
   const description=await api('getMyDescription'),short=await api('getMyShortDescription');
-  if(commands.map(c=>c.command).sort().join(',')!=='help,request,services,start,status,support'||description.description!==community.languages.ru.description||short.short_description!==community.languages.ru.shortDescription)throw new Error('Telegram bot profile verification failed');
+  if(commands.map(c=>c.command).sort().join(',')!=='help,request,sections,services,start,status,support'||description.description!==community.languages.ru.description||short.short_description!==community.languages.ru.shortDescription)throw new Error('Telegram bot profile verification failed');
   log('Telegram bot profile ready: '+JSON.stringify({bot:me.username,languages,commands:commands.map(c=>c.command),version:community.version}));
   return me;
  }finally{try{if(locked)await client.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',['brill-telegram-profile:'+me.id]);}finally{client.release();}}
@@ -164,7 +164,7 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
   const updated=await api('getChat',{chat_id:chatId});
   if(updated.description!==community.groupDescription)throw new Error('Telegram community description verification failed');
   const groupCommands=await api('getMyCommands',{scope:{type:'chat',chat_id:chatId}});
-  if(groupCommands.map(c=>c.command).sort().join(',')!=='help,request,services,start,support')throw new Error('Telegram community commands verification failed');
+  if(groupCommands.map(c=>c.command).sort().join(',')!=='help,request,sections,services,start,support')throw new Error('Telegram community commands verification failed');
   const pinned=published.find(p=>p.key==='welcome');
   if(updated.pinned_message?.message_id!==pinned.messageId)throw new Error('Telegram community pinned message verification failed');
   const result={version:community.version,chatId:String(chatId),title:updated.title,username:updated.username||null,posts:published,pinnedMessageId:pinned.messageId};

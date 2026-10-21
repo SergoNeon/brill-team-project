@@ -71,3 +71,11 @@ CREATE TABLE IF NOT EXISTS visit_push_subscriptions (
  auth text NOT NULL,
  created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Track public Telegram publications so a service restart does not duplicate posts.
+CREATE TABLE IF NOT EXISTS telegram_community_publications (
+ chat_id text NOT NULL, publication_key text NOT NULL,
+ message_id bigint, content_hash char(64) NOT NULL,
+ status varchar(16) NOT NULL CHECK(status IN ('pending','published')),
+ updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(chat_id,publication_key)
+);

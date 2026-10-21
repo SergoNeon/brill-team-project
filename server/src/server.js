@@ -6,6 +6,7 @@ const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
 const activationHtml=readFileSync(new URL('./activate.html',import.meta.url),'utf8');
 import { Pool } from 'pg';
 import { hashPassword, verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
+import {community,publicTelegramAnswer,setupTelegramCommunity} from './telegram-community.js';
 
 const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
@@ -92,20 +93,13 @@ const server=http.createServer(async(req,res)=>{
   }
   if(msg?.text&&msg.chat?.type==='private'&&String(msg.chat?.id)!==telegramOwnerUserId){
    const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
-   const answers={
-    '/start':'Здравствуйте! BRILL TEAM PROJECT. Услуги: /services. Оставить заявку: /request. Поддержка: /support. Не отправляйте пароли или платёжные данные.',
-    '/help':'Команды: /services, /request, /support. Личные заявки оформляются на сайте BRILL TEAM.',
-    '/services':'Разработка сайтов, CRM и цифровых решений: https://brillteamp.com/',
-    '/request':'Для защищённой заявки и личного чата откройте https://brillteamp.com/',
-    '/support':'Поддержка и личные обращения: https://brillteamp.com/',
-    '/status':'Статус обращения доступен через приватную ссылку, выданную после оформления заявки на сайте.'
-   };
-   if(answers[command])await telegramSend(msg.chat.id,answers[command]);
+   const answer=publicTelegramAnswer(command,msg.from?.language_code);
+   if(answer)await telegramSend(msg.chat.id,answer);
   }
   if(msg?.text&&msg.chat?.type!=='private'&&String(msg.chat?.id)===telegramChatId){
    const command=msg.text.trim().split(/\s+/)[0].toLowerCase().split('@')[0];
    if(command==='/start'||command==='/help'||command==='/services'||command==='/support'||command==='/request'){
-    const message=command==='/services'?'BRILL TEAM PROJECT: разработка сайтов, CRM и цифровых решений. Подробнее: https://brillteamp.com/':command==='/request'||command==='/support'?'Для личного обращения напишите боту в приватном чате: https://t.me/brillteamprojectbot':'Добро пожаловать в BRILL TEAM PROJECT! Услуги: /services. Обращение: /request. Поддержка: /support. Не публикуйте личные данные в группе.';
+    const message=command==='/request'||command==='/support'?'Личное обращение · פנייה אישית · Private inquiry: https://t.me/brillteamprojectbot':publicTelegramAnswer(command,msg.from?.language_code);
     await telegramSend(msg.chat.id,message);
    }
   }
@@ -460,5 +454,5 @@ const server=http.createServer(async(req,res)=>{
   fail(res,404,'Not found');
  }catch(e){if(e.status){fail(res,e.status,e.message)}else{console.error('Request failed:',e.code||e.message);fail(res,e.code==='23505'?409:500,'Server error')}}
 });
-const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook()});
+const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook();if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version)void setupTelegramCommunity(pool,{token:telegramToken,chatId:telegramChatId}).catch(error=>console.error('Telegram community setup stopped:',error.message))});
 process.on('SIGTERM',()=>server.close(()=>pool.end()));

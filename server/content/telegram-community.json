@@ -1,0 +1,49 @@
+{
+  "version": "2026-10-21-v1",
+  "botUsername": "brillteamprojectbot",
+  "groupTitle": "Brill Team Project",
+  "siteUrl": "https://brillteamp.com/",
+  "groupDescription": "BRILL TEAM PROJECT · Независимая разработка: сайты, CRM, приложения и интеграции. פיתוח עצמאי · Independent development. Услуги и обращения: @brillteamprojectbot · https://brillteamp.com/",
+  "languages": {
+    "ru": {
+      "description": "BRILL TEAM PROJECT — независимая разработка сайтов, CRM, мобильных приложений, программных и игровых систем. Посмотрите направления, откройте форму обращения и сохраните личную ссылку на переписку. /services — направления, /request — заявка, /support — поддержка.",
+      "shortDescription": "Сайты, CRM, приложения и интеграции. Направления, заявки и поддержка BRILL TEAM PROJECT.",
+      "commands": {"start":"Начать знакомство","services":"Направления разработки","request":"Оставить заявку","status":"Как проверить обращение","support":"Обратиться в поддержку","help":"Навигация и помощь"},
+      "welcome": "Добро пожаловать в BRILL TEAM PROJECT. Здесь можно познакомиться с направлениями независимой разработки и обсудить задачу.",
+      "directions": "Направления BRILL TEAM PROJECT\n\n• Веб-разработка — сайты, веб-платформы и личные кабинеты.\n• CRM и бизнес-системы — клиенты, задачи, сотрудники и рабочие процессы.\n• Мобильные приложения — продукты для Android и iPhone.\n• Программные системы — прикладные инструменты и серверная логика.\n• Игровые технологии — игровые системы и интерактивные проекты.\n• Интеграции и автоматизация — связь сервисов и обмен данными.",
+      "request": "Заявка и поддержка\n\nОткройте https://brillteamp.com/#contact и опишите задачу: что требуется, для кого предназначено решение, нужные языки, желаемые сроки и существующие сервисы. После отправки сохраните личную ссылку на переписку.\n\nБот помогает перейти к форме; свободные сообщения боту пока не создают обращение. Для обсуждения деталей используйте личную ссылку на переписку. Не публикуйте личные данные и документы в общей группе.",
+      "status": "История обращения доступна по личной ссылке, полученной после отправки формы на сайте. Откройте её, чтобы прочитать ответы и продолжить переписку. Не публикуйте эту ссылку в группе."
+    },
+    "he": {
+      "description": "BRILL TEAM PROJECT — פיתוח עצמאי של אתרים, מערכות CRM, יישומים לנייד, תוכנה ומערכות משחק. אפשר להכיר את תחומי הפיתוח, לפתוח פנייה ולשמור קישור אישי להתכתבות. /services — תחומי פיתוח, /request — פתיחת פנייה, /support — תמיכה.",
+      "shortDescription": "אתרים, CRM, יישומים ואינטגרציות. תחומי פיתוח, פניות ותמיכה של BRILL TEAM PROJECT.",
+      "commands": {"start":"היכרות עם הפרויקט","services":"תחומי הפיתוח","request":"פתיחת פנייה","status":"בדיקת הפנייה","support":"פנייה לתמיכה","help":"ניווט ועזרה"},
+      "welcome": "ברוכים הבאים ל־BRILL TEAM PROJECT. כאן אפשר להכיר את תחומי הפיתוח העצמאי ולדון בצורך שלכם.",
+      "directions": "תחומי הפיתוח של BRILL TEAM PROJECT\n\n• פיתוח אתרים — אתרים, פלטפורמות ואזורי לקוחות.\n• CRM ומערכות עסקיות — לקוחות, משימות, עובדים ותהליכי עבודה.\n• יישומים לנייד — מוצרים ל־Android ול־iPhone.\n• מערכות תוכנה — כלים ייעודיים ולוגיקה בצד השרת.\n• טכנולוגיות משחק — מערכות משחק ופרויקטים אינטראקטיביים.\n• אינטגרציות ואוטומציה — חיבור שירותים והעברת נתונים.",
+      "request": "פניות ותמיכה\n\nפתחו את https://brillteamp.com/#contact ותארו את הצורך: מה נדרש, מי המשתמשים, באילו שפות, מה לוח הזמנים הרצוי ואילו שירותים קיימים. לאחר השליחה שמרו את הקישור האישי להתכתבות.\n\nהבוט מפנה לטופס; הודעות חופשיות לבוט עדיין אינן פותחות פנייה. לפרטים נוספים השתמשו בקישור האישי להתכתבות. אין לפרסם מידע אישי ומסמכים בקבוצה הציבורית.",
+      "status": "היסטוריית הפנייה זמינה בקישור האישי שקיבלתם לאחר שליחת הטופס באתר. פתחו אותו כדי לקרוא תשובות ולהמשיך בהתכתבות. אין לפרסם את הקישור בקבוצה."
+    },
+    "en": {
+      "description": "BRILL TEAM PROJECT — independent development of websites, CRM, mobile applications, software and game systems. Explore our areas of work, open an inquiry and keep your private conversation link. /services — development areas, /request — open an inquiry, /support — support.",
+      "shortDescription": "Websites, CRM, applications and integrations. Development areas, inquiries and support by BRILL TEAM PROJECT.",
+      "commands": {"start":"Meet the project","services":"Development areas","request":"Open an inquiry","status":"Check your inquiry","support":"Contact support","help":"Navigation and help"},
+      "welcome": "Welcome to BRILL TEAM PROJECT. Explore our areas of independent development and discuss your requirements.",
+      "directions": "BRILL TEAM PROJECT · Development areas\n\n• Web development — websites, platforms and client portals.\n• CRM and business systems — clients, tasks, staff and workflows.\n• Mobile applications — products for Android and iPhone.\n• Software systems — dedicated tools and server logic.\n• Game technology — game systems and interactive projects.\n• Integrations and automation — connected services and data exchange.",
+      "request": "Inquiries and support\n\nOpen https://brillteamp.com/#contact and describe your requirements: the task, intended users, languages, preferred timeline and existing services. After submitting, keep your private conversation link.\n\nThe bot links to the form; free-text messages to the bot do not yet create an inquiry. Use your private conversation link to discuss the details. Keep personal information and documents out of the public group.",
+      "status": "Your inquiry history is available through the private link issued after you submit the website form. Open it to read replies and continue the conversation. Keep this link private."
+    }
+  },
+  "posts": [
+    {
+      "key": "welcome",
+      "pin": true,
+      "translations": {
+        "ru": "BRILL TEAM PROJECT\n\nДобро пожаловать в открытую группу независимой разработки. Здесь обсуждаем цифровые задачи, подходы и направления работы.\n\nНавигация:\n/services — направления разработки\n/request — оставить заявку\n/support — поддержка\n/help — помощь\n\nОбщаемся по теме и с уважением. Рекламу и массовые рассылки заранее согласовывайте с администрацией. Личные обращения оформляйте на сайте.",
+        "he": "BRILL TEAM PROJECT\n\nברוכים הבאים לקבוצה פתוחה בנושא פיתוח עצמאי. כאן מדברים על צרכים דיגיטליים, גישות ותחומי פיתוח.\n\n/services — תחומי פיתוח\n/request — פתיחת פנייה\n/support — תמיכה\n/help — עזרה\n\nשומרים על שיח מכבד וענייני. פרסום והפצה מסחרית מחייבים תיאום עם מנהלי הקבוצה. פניות אישיות פותחים באתר.",
+        "en": "BRILL TEAM PROJECT\n\nWelcome to an open group for independent development. Discuss digital requirements, approaches and areas of work.\n\n/services — development areas\n/request — open an inquiry\n/support — support\n/help — help\n\nKeep discussions relevant and respectful. Arrange advertising and bulk promotions with the group administrators first. Open personal inquiries on the website."
+      }
+    },
+    {"key":"directions","source":"directions"},
+    {"key":"inquiries","source":"request"}
+  ]
+}

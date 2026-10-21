@@ -28,6 +28,6 @@ jobs:
         run: |
           node --input-type=module -e 'import {Pool} from "pg";import{readFileSync}from"node:fs";const p=new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:true}});try{await p.query(readFileSync("schema.sql","utf8"))}finally{await p.end()}'
       - name: Authentication, visits and Telegram HTTP regression tests
-        run: node --test test/auth.test.js test/visits.test.js test/http-telegram.test.js
+        run: node --test test/auth.test.js test/visits.test.js test/http-telegram.test.js test/telegram-community.test.js
       - name: Neon HTTP end-to-end test
         run: node --test test/http-neon.test.js

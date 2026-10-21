@@ -144,10 +144,11 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
    for(const section of community.sections){
     const key='topic-'+section.key;
     const existing=(await client.query('SELECT message_id,status FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[chatId,key])).rows[0];
-    if(existing?.status==='published'&&existing.message_id)continue;
+    if(existing?.status==='published'&&existing.message_id){log('Telegram forum topic already registered: '+JSON.stringify({key,threadId:existing.message_id}));continue;}
     if(existing?.status==='pending')throw new Error('Telegram topic creation uncertain: '+key);
     await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'pending') ON CONFLICT(chat_id,publication_key) DO NOTHING",[chatId,key,hash(section.label.ru)]);
-    let topic;try{topic=await api('createForumTopic',{chat_id:chatId,name:section.label.ru.slice(0,128)});}catch(error){if(!error.uncertain)await client.query("DELETE FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2 AND status='pending'",[chatId,key]);throw error;}
+    const topicColors={web:0x6FB9F0,crm:0xFFD67E,mobile:0xCB86DB,integrations:0x8EEE98,games:0xFF93B2,consultations:0x6FB9F0,projects:0xFFD67E,support:0x8EEE98,rules:0xFF93B2};
+    let topic;try{topic=await api('createForumTopic',{chat_id:chatId,name:section.label.ru.slice(0,128),icon_color:topicColors[section.key]||0x6FB9F0});}catch(error){if(!error.uncertain)await client.query("DELETE FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2 AND status='pending'",[chatId,key]);throw error;}
     await client.query("UPDATE telegram_community_publications SET message_id=$3,status='published',updated_at=now() WHERE chat_id=$1 AND publication_key=$2",[chatId,key,topic.message_thread_id]);
     await api('sendMessage',{chat_id:chatId,message_thread_id:topic.message_thread_id,text:publicationText({translations:section.text}),disable_notification:true});
     log('Telegram forum topic ready: '+JSON.stringify({key,threadId:topic.message_thread_id}));

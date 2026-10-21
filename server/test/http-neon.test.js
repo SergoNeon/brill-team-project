@@ -13,9 +13,9 @@ test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.en
  const origin='http://localhost:43789';
  const id=crypto.randomUUID();
  let server;
+ const qaGuard=await pool.query("SELECT marker FROM public.qa_test_guard WHERE marker='brill-team-isolated-qa-20261021'");
+ assert.equal(qaGuard.rowCount,1,'Refusing to run integration test without isolated QA marker');
  try{
-  const qaGuard=await pool.query("SELECT marker FROM public.qa_test_guard WHERE marker='brill-team-isolated-qa-20261021'");
-  assert.equal(qaGuard.rowCount,1,'Refusing to run destructive integration test without isolated QA marker');
   await pool.query('INSERT INTO admin_users(id,username,password_hash) VALUES($1,$2,$3)',[id,user,hashPassword(process.env.ADMIN_TEST_PASSWORD)]);
   const {spawn}=await import('node:child_process');
   server=spawn(process.execPath,['src/server.js'],{cwd:new URL('../',import.meta.url).pathname,env:{...process.env,PORT:'43789',PUBLIC_ORIGIN:origin},stdio:['ignore','pipe','pipe']});

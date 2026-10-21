@@ -21,6 +21,7 @@ const telegramEnabled=Boolean(telegramToken&&telegramChatId&&telegramWebhookSecr
 const telegramOwnerUserId=process.env.TELEGRAM_OWNER_USER_ID||'';
 const telegramOwnerCrmUsername=process.env.TELEGRAM_OWNER_CRM_USERNAME||'';
 let telegramGroupId=process.env.TELEGRAM_PUBLIC_GROUP_ID||'';
+async function restoreCommunityGroup(){try{const q=await pool.query("SELECT chat_id FROM telegram_community_publications WHERE publication_key='target' AND status='published' ORDER BY updated_at DESC LIMIT 2");if(q.rows.length===1&&/^-[0-9]+$/.test(q.rows[0].chat_id)){telegramGroupId=q.rows[0].chat_id;console.log('Telegram community routing restored from verified publication:',telegramGroupId)}else console.log('Telegram community routing unresolved:',q.rows.length)}catch(error){console.error('Telegram community routing restore failed:',error.message)}}
 let communitySetupTask;
 function scheduleCommunitySetup(chatId=telegramGroupId||telegramChatId,notifyOwner=false){
  if(communitySetupTask)return communitySetupTask;
@@ -470,5 +471,5 @@ const server=http.createServer(async(req,res)=>{
   fail(res,404,'Not found');
  }catch(e){if(e.status){fail(res,e.status,e.message)}else{console.error('Request failed:',e.code||e.message);fail(res,e.code==='23505'?409:500,'Server error')}}
 });
-const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook();if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version)void scheduleCommunitySetup()});
+const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook();void restoreCommunityGroup().then(()=>{if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version)void scheduleCommunitySetup()})});
 process.on('SIGTERM',()=>server.close(()=>pool.end()));

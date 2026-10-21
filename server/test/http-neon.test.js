@@ -6,7 +6,7 @@ import {hashPassword} from '../src/auth.js';
 
 // Run against a dedicated, disposable Neon test database only.
 // DATABASE_URL and ADMIN_TEST_PASSWORD must be injected securely by CI.
-test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.env.DATABASE_URL||!process.env.ADMIN_TEST_PASSWORD?'Set DATABASE_URL and ADMIN_TEST_PASSWORD':''},async()=>{
+test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.env.DATABASE_URL||!process.env.ADMIN_TEST_PASSWORD?'Set DATABASE_URL and ADMIN_TEST_PASSWORD':false},async()=>{
  const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:true}});
  const user='e2e_'+crypto.randomUUID().replaceAll('-','').slice(0,16);
  const email='e2e-'+crypto.randomUUID()+'@example.invalid';
@@ -23,7 +23,7 @@ test('HTTP inquiry write, admin login, inbox read and logout', {skip:!process.en
   for(let i=0;i<50;i++){if(server.exitCode!==null)break;try{const r=await fetch(origin+'/health');if(r.ok){ready=true;break}}catch{}await new Promise(r=>setTimeout(r,100))}
   assert.ok(ready,'API did not start');
   const request=await fetch(origin+'/api/inquiries',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({name:'Integration Test',email,message:'Real HTTP end-to-end persistence test',website:''})});
-  assert.equal(request.status,201,await request.text());
+  assert.equal(request.status,201,await request.clone().text());
   const created=await request.json();
   assert.match(created.chat_token,/^[A-Za-z0-9_-]{43}$/);
   const persisted=await pool.query('SELECT id,message FROM inquiries WHERE email=$1',[email]);assert.equal(persisted.rowCount,1);

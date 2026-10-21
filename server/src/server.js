@@ -49,7 +49,7 @@ async function registerTelegramWebhook(){
  try{
   const response=await fetch('https://api.telegram.org/bot'+telegramToken+'/setWebhook',{
    method:'POST',headers:{'content-type':'application/json'},
-   body:JSON.stringify({url:webhookUrl,secret_token:telegramWebhookSecret,allowed_updates:['message'],drop_pending_updates:false}),
+   body:JSON.stringify({url:webhookUrl,secret_token:telegramWebhookSecret,allowed_updates:['message','my_chat_member'],drop_pending_updates:false}),
    signal:AbortSignal.timeout(10000)
   });
   const result=await response.json();
@@ -85,7 +85,11 @@ const server=http.createServer(async(req,res)=>{
   if(typeof supplied!=='string'||Buffer.byteLength(supplied)!==Buffer.byteLength(telegramWebhookSecret)||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
   const update=await body(req);
   const msg=update?.message;
+  const membership=update?.my_chat_member;
   if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version){
+   if(membership&&['group','supergroup'].includes(membership.chat?.type)&&membership.chat?.title?.normalize('NFKC').trim().toLowerCase()===community.groupTitle.toLowerCase()&&['administrator','member'].includes(membership.new_chat_member?.status)&&String(membership.new_chat_member?.user?.username||'').toLowerCase()===community.botUsername){
+    void scheduleCommunitySetup(String(membership.chat.id),true);
+   }
    const selected=selectedTelegramGroup(msg,telegramOwnerUserId);
    if(selected)void scheduleCommunitySetup(selected,true);
    else if(isAuthorizedCommunityStart(msg,telegramOwnerUserId))void scheduleCommunitySetup(String(msg.chat.id),true);

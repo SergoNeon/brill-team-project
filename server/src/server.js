@@ -6,7 +6,7 @@ const adminHtml=readFileSync(new URL('./admin.html',import.meta.url),'utf8');
 const activationHtml=readFileSync(new URL('./activate.html',import.meta.url),'utf8');
 import { Pool } from 'pg';
 import { hashPassword, verifyPassword, createSessionToken, tokenDigest, parseCookie, secureSessionCookie } from './auth.js';
-import {community,isAuthorizedCommunityStart,publicTelegramAnswer,setupTelegramCommunity} from './telegram-community.js';
+import {community,isAuthorizedCommunityStart,publicTelegramAnswer,selectedTelegramGroup,setupTelegramCommunity} from './telegram-community.js';
 
 const required=['DATABASE_URL','PUBLIC_ORIGIN'];
 for(const k of required) if(!process.env[k]) throw new Error('Missing required environment variable: '+k);
@@ -22,19 +22,19 @@ const telegramOwnerUserId=process.env.TELEGRAM_OWNER_USER_ID||'';
 const telegramOwnerCrmUsername=process.env.TELEGRAM_OWNER_CRM_USERNAME||'';
 let telegramGroupId=process.env.TELEGRAM_PUBLIC_GROUP_ID||'';
 let communitySetupTask;
-function scheduleCommunitySetup(chatId=telegramGroupId||telegramChatId){
+function scheduleCommunitySetup(chatId=telegramGroupId||telegramChatId,notifyOwner=false){
  if(communitySetupTask)return communitySetupTask;
- communitySetupTask=setupTelegramCommunity(pool,{token:telegramToken,chatId,ownerUserId:telegramOwnerUserId}).then(result=>{if(result.chatId)telegramGroupId=result.chatId;return result}).catch(error=>console.error('Telegram community setup stopped:',error.message)).finally(()=>{communitySetupTask=null});
+ communitySetupTask=setupTelegramCommunity(pool,{token:telegramToken,chatId,ownerUserId:telegramOwnerUserId}).then(async result=>{if(result.chatId)telegramGroupId=result.chatId;if(notifyOwner&&result.posts)await telegramSend(telegramOwnerUserId,'Группа Brill Team Project заполнена: приветствие, направления разработки и порядок обращения. Приветствие закреплено; описание группы и меню обновлены.',{remove_keyboard:true});return result}).catch(async error=>{console.error('Telegram community setup stopped:',error.message);if(notifyOwner){const notice=error.message.includes('permissions')?'Группа найдена. Для оформления дайте @brillteamprojectbot права администратора: изменение информации и закрепление сообщений. Затем отправьте в группе /start@brillteamprojectbot.':'Не удалось завершить заполнение группы. Подготовленные материалы сохранены; ошибка зарегистрирована для проверки.';await telegramSend(telegramOwnerUserId,notice);}}).finally(()=>{communitySetupTask=null});
  return communitySetupTask;
 }
-async function telegramSend(chatId,message){
+async function telegramSend(chatId,message,replyMarkup){
  if(!telegramEnabled)return false;
  try{
   const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),7000);
   try{
    const response=await fetch('https://api.telegram.org/bot'+telegramToken+'/sendMessage',{
     method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:true}),
+    body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:true,...(replyMarkup?{reply_markup:replyMarkup}:{})}),
     signal:controller.signal
    });
    if(!response.ok)console.error('Telegram send failed:',response.status);
@@ -85,7 +85,11 @@ const server=http.createServer(async(req,res)=>{
   if(typeof supplied!=='string'||Buffer.byteLength(supplied)!==Buffer.byteLength(telegramWebhookSecret)||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
   const update=await body(req);
   const msg=update?.message;
-  if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version&&isAuthorizedCommunityStart(msg,telegramOwnerUserId))void scheduleCommunitySetup(String(msg.chat.id));
+  if(process.env.TELEGRAM_COMMUNITY_CONTENT_VERSION===community.version){
+   const selected=selectedTelegramGroup(msg,telegramOwnerUserId);
+   if(selected)void scheduleCommunitySetup(selected,true);
+   else if(isAuthorizedCommunityStart(msg,telegramOwnerUserId))void scheduleCommunitySetup(String(msg.chat.id),true);
+  }
   if(msg?.text&&msg.chat?.type==='private'&&String(msg.chat?.id)===telegramOwnerUserId&&String(msg.from?.id)===telegramOwnerUserId&&telegramOwnerUserId&&telegramOwnerCrmUsername){
    const actor=await pool.query('SELECT id FROM admin_users WHERE username=$1 AND active=true',[telegramOwnerCrmUsername]);
    if(actor.rowCount){

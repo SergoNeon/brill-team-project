@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {community,isAuthorizedCommunityStart,publicationText,publicTelegramAnswer,setupTelegramCommunity} from '../src/telegram-community.js';
+import {community,groupSelectionRequestId,isAuthorizedCommunityStart,publicationText,publicTelegramAnswer,selectedTelegramGroup,setupTelegramCommunity} from '../src/telegram-community.js';
 
 function fixture({title=community.groupTitle,username=community.botUsername,canPin=true,timeoutSend=false,type='supergroup'}={}){
  const rows=new Map(),calls=[],messages=[];let pinned,description='',locked=false;
@@ -37,7 +37,7 @@ function fixture({title=community.groupTitle,username=community.botUsername,canP
   if(method==='getMyShortDescription')result={short_description:shorts.get(body.language_code||'')};
   if(method==='sendMessage'){
    if(timeoutSend)throw new TypeError('Isolated timeout');
-   result={message_id:100+messages.length};messages.push({id:result.message_id,text:body.text});
+   result={message_id:100+messages.length};messages.push({id:result.message_id,text:body.text,chatId:body.chat_id,replyMarkup:body.reply_markup});
   }
   if(method==='pinChatMessage')pinned=body.message_id;
   return new Response(JSON.stringify({ok:true,result}),{status:200});
@@ -84,8 +84,24 @@ test('fills the bot profile while refusing to publish group posts to a private c
  const f=fixture({type:'private'});
  const result=await setupTelegramCommunity(f.pool,{...f.options,chatId:'123456789',ownerUserId:'123456789'});
  assert.equal(result.waitingForGroup,true);assert.equal(result.ownerBindingConfigured,true);
- assert.equal(f.rows.get('profile').status,'published');assert.equal(f.messages.length,0);
+ assert.equal(f.rows.get('profile').status,'published');assert.equal(f.messages.length,1);
+ assert.equal(f.messages[0].chatId,'123456789');
+ assert.equal(f.messages[0].replyMarkup.keyboard[0][0].request_chat.bot_is_member,true);
+ assert.equal(f.messages[0].replyMarkup.keyboard[0][0].request_chat.chat_is_channel,false);
+ await setupTelegramCommunity(f.pool,{...f.options,chatId:'123456789',ownerUserId:'123456789'});
+ assert.equal(f.messages.length,1,'The owner must not receive duplicate group-selection prompts');
  assert.ok(!f.calls.some(c=>c.method==='setChatDescription'||c.method==='pinChatMessage'));
+});
+test('accepts a native group selection only from the owner private chat',()=>{
+ assert.equal(selectedTelegramGroup(undefined,'123'),null);
+ assert.equal(selectedTelegramGroup({},'123'),null);
+ const message={from:{id:123},chat:{id:123,type:'private'},chat_shared:{request_id:groupSelectionRequestId,chat_id:-100123,title:community.groupTitle}};
+ assert.equal(selectedTelegramGroup(message,'123'),'-100123');
+ assert.equal(selectedTelegramGroup(message,'456'),null);
+ assert.equal(selectedTelegramGroup({...message,chat:{id:456,type:'private'}},'123'),null);
+ assert.equal(selectedTelegramGroup({...message,chat_shared:{...message.chat_shared,request_id:0}},'123'),null);
+ assert.equal(selectedTelegramGroup({...message,chat_shared:{...message.chat_shared,chat_id:123}},'123'),null);
+ assert.equal(selectedTelegramGroup({...message,chat_shared:{...message.chat_shared,title:'Another group'}},'123'),null);
 });
 test('only the configured owner can bind the named group with a start command',()=>{
  const message={text:'/start@brillteamprojectbot',from:{id:123},chat:{id:-100123,type:'supergroup',title:community.groupTitle}};

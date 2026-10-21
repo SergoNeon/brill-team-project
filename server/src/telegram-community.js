@@ -4,7 +4,14 @@ import crypto from 'node:crypto';
 export const community=JSON.parse(readFileSync(new URL('../content/telegram-community.json',import.meta.url),'utf8'));
 const languages=['ru','he','en'];
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
+export const groupSelectionRequestId=20261021;
 export const publicationText=post=>languages.map(lang=>post.translations?.[lang]||community.languages[lang][post.source]).join('\n\n');
+export function selectedTelegramGroup(message,ownerId){
+ const shared=message?.chat_shared;
+ if(!ownerId||message?.chat?.type!=='private'||String(message.chat.id)!==String(ownerId)||String(message.from?.id)!==String(ownerId)||shared?.request_id!==groupSelectionRequestId||!Number.isSafeInteger(shared.chat_id)||shared.chat_id>=0)return null;
+ if(shared.title&&shared.title.normalize('NFKC').trim().toLowerCase()!==community.groupTitle.toLowerCase())return null;
+ return String(shared.chat_id);
+}
 export function isAuthorizedCommunityStart(message,ownerId){
  return !!ownerId&&typeof message?.text==='string'&&['group','supergroup'].includes(message.chat?.type)&&String(message.from?.id)===String(ownerId)&&typeof message.chat?.title==='string'&&message.chat.title.normalize('NFKC').trim().toLowerCase()===community.groupTitle.toLowerCase()&&/^\/start(?:@\w+)?(?:\s|$)/i.test(message.text);
 }
@@ -34,6 +41,23 @@ function telegramApi(token,fetchApi){
   if(!response.ok||!result.ok)throw Object.assign(new Error('Telegram '+method+' failed ('+(result.error_code||response.status)+')'),{method,uncertain:response.status>=500});
   return result.result;
  };
+}
+
+async function requestGroupSelection(pool,api,ownerId,log){
+ const client=await pool.connect(),key='group-selection:'+community.version;let locked=false;
+ try{
+  locked=(await client.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS acquired',['brill-telegram-selection:'+ownerId])).rows[0].acquired;
+  if(!locked)return null;
+  const existing=(await client.query('SELECT status,content_hash,message_id FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2',[ownerId,key])).rows[0];
+  if(existing){log('Telegram group selection already requested: '+JSON.stringify({messageId:existing.message_id,status:existing.status}));return existing.message_id;}
+  const text='BRILL TEAM PROJECT\n\nГотовы три публикации для вашей группы: приветствие, направления разработки и порядок обращения.\n\nНажмите «Выбрать группу» и укажите Brill Team Project. Бот проверит доступ и разместит подготовленные материалы.';
+  await client.query("INSERT INTO telegram_community_publications(chat_id,publication_key,content_hash,status) VALUES($1,$2,$3,'pending')",[ownerId,key,hash(text)]);
+  let sent;
+  try{sent=await api('sendMessage',{chat_id:ownerId,text,reply_markup:{keyboard:[[{text:'Выбрать группу',request_chat:{request_id:groupSelectionRequestId,chat_is_channel:false,bot_is_member:true,request_title:true,request_username:true}}]],resize_keyboard:true,one_time_keyboard:true}});}
+  catch(error){if(!error.uncertain)await client.query("DELETE FROM telegram_community_publications WHERE chat_id=$1 AND publication_key=$2 AND status='pending'",[ownerId,key]);throw error;}
+  await client.query("UPDATE telegram_community_publications SET message_id=$3,status='published',updated_at=now() WHERE chat_id=$1 AND publication_key=$2",[ownerId,key,sent.message_id]);
+  log('Telegram group selection sent: '+JSON.stringify({messageId:sent.message_id,requestId:groupSelectionRequestId}));return sent.message_id;
+ }finally{try{if(locked)await client.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',['brill-telegram-selection:'+ownerId]);}finally{client.release();}}
 }
 
 export async function setupTelegramBotProfile(pool,{token,fetchApi=globalThis.fetch,log=console.log}={}){
@@ -81,8 +105,9 @@ export async function setupTelegramCommunity(pool,{token,chatId,ownerUserId,fetc
  const chat=await api('getChat',{chat_id:chatId});
  log('Telegram community target: '+JSON.stringify({bot:me.username,title:chat.title,type:chat.type,isForum:!!chat.is_forum}));
  if(chat.type==='private'){
+  const selectionMessageId=ownerUserId?await requestGroupSelection(pool,api,ownerUserId,log):null;
   log('Telegram community waiting for group: '+JSON.stringify({configuredChatType:'private',ownerBindingConfigured:!!ownerUserId,groupPostsSent:false}));
-  return {waitingForGroup:true,bot:me.username,ownerBindingConfigured:!!ownerUserId};
+  return {waitingForGroup:true,bot:me.username,ownerBindingConfigured:!!ownerUserId,selectionMessageId};
  }
  if(me.username?.toLowerCase()!==community.botUsername||!['group','supergroup'].includes(chat.type)||String(chat.id)!==String(chatId)||chat.title?.normalize('NFKC').trim().toLowerCase()!==community.groupTitle.toLowerCase())throw new Error('Telegram community recipient does not match the authorized group and bot');
  const membership=await api('getChatMember',{chat_id:chatId,user_id:me.id});

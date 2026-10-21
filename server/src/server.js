@@ -17,6 +17,8 @@ const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
 const telegramChatId=process.env.TELEGRAM_CHAT_ID||'';
 const telegramWebhookSecret=process.env.TELEGRAM_WEBHOOK_SECRET||'';
 const telegramEnabled=Boolean(telegramToken&&telegramChatId&&telegramWebhookSecret);
+const telegramOwnerUserId=process.env.TELEGRAM_OWNER_USER_ID||'';
+const telegramOwnerCrmUsername=process.env.TELEGRAM_OWNER_CRM_USERNAME||'';
 async function telegramSend(chatId,message){
  if(!telegramEnabled)return false;
  try{
@@ -59,18 +61,18 @@ const server=http.createServer(async(req,res)=>{
   if(typeof supplied!=='string'||supplied.length!==telegramWebhookSecret.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
   const update=await body(req);
   const msg=update?.message;
-  if(msg?.text&&String(msg.chat?.id)===telegramChatId){
-   const match=msg.text.match(/^[/]reply(?:@\w+)?\s+([a-f0-9-]{36})\s+([\s\S]{1,2000})/i);
-   if(match){
-    const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
-    if(reply){
-     const actor=await pool.query('SELECT id FROM admin_users WHERE active=true ORDER BY username LIMIT 1');
-     if(actor.rowCount){
+  if(msg?.text&&String(msg.chat?.id)===telegramChatId&&String(msg.from?.id)===telegramOwnerUserId&&telegramOwnerUserId&&telegramOwnerCrmUsername){
+   const actor=await pool.query('SELECT id FROM admin_users WHERE username=$1 AND active=true',[telegramOwnerCrmUsername]);
+   if(actor.rowCount){
+    const match=msg.text.match(/^[/]reply(?:@\\w+)?\\s+([a-f0-9-]{36})\\s+([\\s\\S]{1,2000})$/i);
+    if(match){
+     const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
+     if(reply){
       const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,sender_id,message) SELECT $1,id,'employee',$3,$4 FROM inquiries WHERE id=$2 RETURNING id",[crypto.randomUUID(),inquiryId,actor.rows[0].id,reply]);
-      telegramNotice(q.rowCount?'Ответ клиенту сохранён в CRM.':'Обращение не найдено.');
-     }else telegramNotice('В CRM нет активного сотрудника. Ответ не отправлен.');
-    }
-   }else if(msg.text==='/start')telegramNotice('BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
+      await telegramSend(telegramChatId,q.rowCount?'Ответ клиенту сохранён в CRM.':'Обращение не найдено.');
+     }
+    }else if(msg.text==='/start')await telegramSend(telegramChatId,'BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
+   }
   }
   json(res,200,{ok:true});return
  }

@@ -35,6 +35,21 @@ async function telegramSend(chatId,message){
  }catch(error){console.error('Telegram send unavailable:',error.name);return false}
 }
 function telegramNotice(message){if(telegramEnabled&&telegramOwnerUserId)void telegramSend(telegramOwnerUserId,message)}
+async function registerTelegramWebhook(){
+ if(!telegramToken||!telegramWebhookSecret){console.log('Telegram webhook inactive: token or secret missing');return}
+ const webhookUrl='https://brill-team-project-api.onrender.com/api/telegram/webhook';
+ try{
+  const response=await fetch('https://api.telegram.org/bot'+telegramToken+'/setWebhook',{
+   method:'POST',headers:{'content-type':'application/json'},
+   body:JSON.stringify({url:webhookUrl,secret_token:telegramWebhookSecret,allowed_updates:['message'],drop_pending_updates:false}),
+   signal:AbortSignal.timeout(10000)
+  });
+  const result=await response.json();
+  if(response.ok&&result.ok)console.log('Telegram webhook registered');
+  else console.error('Telegram webhook registration failed:',response.status,String(result.description||'').slice(0,150));
+ }catch(error){console.error('Telegram webhook registration unavailable:',error.name)}
+}
+
 
 const allowVisit=visitLimiter();
 const MAX_BODY=16*1024;
@@ -433,5 +448,5 @@ const server=http.createServer(async(req,res)=>{
   fail(res,404,'Not found');
  }catch(e){if(e.status){fail(res,e.status,e.message)}else{console.error('Request failed:',e.code||e.message);fail(res,e.code==='23505'?409:500,'Server error')}}
 });
-const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port));
+const port=Number(process.env.PORT||3000);server.listen(port,process.env.HOST||'127.0.0.1',()=>{console.log('BRILL API listening on '+(process.env.HOST||'127.0.0.1')+':'+port);void registerTelegramWebhook()});
 process.on('SIGTERM',()=>server.close(()=>pool.end()));

@@ -93,7 +93,8 @@ const server=http.createServer(async(req,res)=>{
    if(!name||name.length>120||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||message.length<10||message.length>5000){fail(res,400,'Invalid fields');return}
    const inquiryId=crypto.randomUUID(),accessToken=crypto.randomBytes(32).toString('base64url'),accessHash=crypto.createHash('sha256').update(accessToken).digest('hex');
    const client=await pool.connect();try{await client.query('BEGIN');await client.query('INSERT INTO inquiries (id,name,email,message) VALUES ($1,$2,$3,$4)',[inquiryId,name,email,message]);await client.query('INSERT INTO inquiry_client_access(inquiry_id,token_hash) VALUES($1,$2)',[inquiryId,accessHash]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
-   telegramNotice('Новое обращение BRILL TEAM\\nНомер: '+inquiryId+'\\nИмя: '+name+'\\nСообщение: '+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
+   telegramNotice('Новое обращение BRILL TEAM\\nНомер: '+inquiryId+'\\nИмя: '+name+'\\nСообщение: '+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');
+   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
   }
   if(/^\/api\/client\/inquiries\/[a-f0-9-]{36}\/chat$/.test(url.pathname)&&['GET','POST'].includes(req.method)){
    const inquiryId=url.pathname.split('/')[4],token=req.headers['x-brill-chat-token'];
@@ -106,7 +107,8 @@ const server=http.createServer(async(req,res)=>{
    const data=await body(req),message=text(data.message,2000);
    if(!message||message.length>2000){fail(res,400,'Invalid message');return}
    const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,message) VALUES($1,$2,'client',$3) RETURNING id,created_at",[crypto.randomUUID(),inquiryId,message]);
-   telegramNotice('Сообщение клиента\\nОбращение: '+inquiryId+'\\n'+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,...q.rows[0]});return
+   telegramNotice('Сообщение клиента\\nОбращение: '+inquiryId+'\\n'+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');
+   json(res,201,{ok:true,...q.rows[0]});return
   }
   if(url.pathname==='/api/content'&&req.method==='GET'){
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}
@@ -457,7 +459,8 @@ process.on('SIGTERM',()=>server.close(()=>pool.end()));
    if(!name||name.length>120||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||message.length<10||message.length>5000){fail(res,400,'Invalid fields');return}
    const inquiryId=crypto.randomUUID(),accessToken=crypto.randomBytes(32).toString('base64url'),accessHash=crypto.createHash('sha256').update(accessToken).digest('hex');
    const client=await pool.connect();try{await client.query('BEGIN');await client.query('INSERT INTO inquiries (id,name,email,message) VALUES ($1,$2,$3,$4)',[inquiryId,name,email,message]);await client.query('INSERT INTO inquiry_client_access(inquiry_id,token_hash) VALUES($1,$2)',[inquiryId,accessHash]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
-   telegramNotice('Новое обращение BRILL TEAM\\nНомер: '+inquiryId+'\\nИмя: '+name+'\\nСообщение: '+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
+   telegramNotice('Новое обращение BRILL TEAM\\nНомер: '+inquiryId+'\\nИмя: '+name+'\\nСообщение: '+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');
+   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
   }
   if(/^\/api\/client\/inquiries\/[a-f0-9-]{36}\/chat$/.test(url.pathname)&&['GET','POST'].includes(req.method)){
    const inquiryId=url.pathname.split('/')[4],token=req.headers['x-brill-chat-token'];
@@ -470,7 +473,8 @@ process.on('SIGTERM',()=>server.close(()=>pool.end()));
    const data=await body(req),message=text(data.message,2000);
    if(!message||message.length>2000){fail(res,400,'Invalid message');return}
    const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,message) VALUES($1,$2,'client',$3) RETURNING id,created_at",[crypto.randomUUID(),inquiryId,message]);
-   telegramNotice('Сообщение клиента\\nОбращение: '+inquiryId+'\\n'+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,...q.rows[0]});return
+   telegramNotice('Сообщение клиента\\nОбращение: '+inquiryId+'\\n'+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');
+   json(res,201,{ok:true,...q.rows[0]});return
   }
   if(url.pathname==='/api/content'&&req.method==='GET'){
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}

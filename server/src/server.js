@@ -13,6 +13,27 @@ for(const k of required) if(!process.env[k]) throw new Error('Missing required e
 const origins=new Set(process.env.PUBLIC_ORIGIN.split(',').map(value=>new URL(value.trim()).origin));
 const pool=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.PGSSL==='disable'?false:{rejectUnauthorized:true},max:5});
 const buckets=new Map();
+const telegramToken=process.env.TELEGRAM_BOT_TOKEN||'';
+const telegramChatId=process.env.TELEGRAM_CHAT_ID||'';
+const telegramWebhookSecret=process.env.TELEGRAM_WEBHOOK_SECRET||'';
+const telegramEnabled=Boolean(telegramToken&&telegramChatId&&telegramWebhookSecret);
+async function telegramSend(chatId,message){
+ if(!telegramEnabled)return false;
+ try{
+  const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),7000);
+  try{
+   const response=await fetch('https://api.telegram.org/bot'+telegramToken+'/sendMessage',{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({chat_id:chatId,text:message,disable_web_page_preview:true}),
+    signal:controller.signal
+   });
+   if(!response.ok)console.error('Telegram send failed:',response.status);
+   return response.ok;
+  }finally{clearTimeout(timeout)}
+ }catch(error){console.error('Telegram send unavailable:',error.name);return false}
+}
+function telegramNotice(message){if(telegramEnabled)void telegramSend(telegramChatId,message)}
+
 const allowVisit=visitLimiter();
 const MAX_BODY=16*1024;
 function json(res,status,data){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(data))}
@@ -32,6 +53,28 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/admin/activate'&&req.method==='GET'){res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; worker-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});res.end(activationHtml);return}
  if(url.pathname==='/admin/push-worker.js'&&req.method==='GET'){res.writeHead(200,{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','service-worker-allowed':'/admin/','x-content-type-options':'nosniff'});res.end("self.addEventListener('push',event=>{const d=event.data?.json()||{};event.waitUntil(self.registration.showNotification(d.title||'BRILL TEAM',{body:d.body||'',tag:d.tag||'visit',data:{url:'/admin'}}))});self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.openWindow('/admin'))});");return}
  if(url.pathname==='/health'&&req.method==='GET'){json(res,200,{ok:true});return}
+ if(url.pathname==='/api/telegram/webhook'&&req.method==='POST'){
+  if(!telegramEnabled){fail(res,503,'Telegram not configured');return}
+  const supplied=req.headers['x-telegram-bot-api-secret-token'];
+  if(typeof supplied!=='string'||supplied.length!==telegramWebhookSecret.length||!crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(telegramWebhookSecret))){fail(res,403,'Forbidden');return}
+  const update=await body(req);
+  const msg=update?.message;
+  if(msg?.text&&String(msg.chat?.id)===telegramChatId){
+   const match=msg.text.match(/^\\/reply(?:@\\w+)?\\s+([a-f0-9-]{36})\\s+([\\s\\S]{1,2000})$/i);
+   if(match){
+    const inquiryId=match[1].toLowerCase(),reply=match[2].trim();
+    if(reply){
+     const actor=await pool.query('SELECT id FROM admin_users WHERE active=true ORDER BY username LIMIT 1');
+     if(actor.rowCount){
+      const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,sender_id,message) SELECT $1,id,'employee',$3,$4 FROM inquiries WHERE id=$2 RETURNING id",[crypto.randomUUID(),inquiryId,actor.rows[0].id,reply]);
+      telegramNotice(q.rowCount?'Ответ клиенту сохранён в CRM.':'Обращение не найдено.');
+     }else telegramNotice('В CRM нет активного сотрудника. Ответ не отправлен.');
+    }
+   }else if(msg.text==='/start')telegramNotice('BRILL TEAM CRM подключена. Ответ: /reply UUID текст');
+  }
+  json(res,200,{ok:true});return
+ }
+
  if(!url.pathname.startsWith('/api/')){fail(res,404,'Not found');return}
  if(req.method!=='GET'&&!validOrigin(req)){fail(res,403,'Origin not allowed');return}
  try{
@@ -50,7 +93,7 @@ const server=http.createServer(async(req,res)=>{
    if(!name||name.length>120||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||message.length<10||message.length>5000){fail(res,400,'Invalid fields');return}
    const inquiryId=crypto.randomUUID(),accessToken=crypto.randomBytes(32).toString('base64url'),accessHash=crypto.createHash('sha256').update(accessToken).digest('hex');
    const client=await pool.connect();try{await client.query('BEGIN');await client.query('INSERT INTO inquiries (id,name,email,message) VALUES ($1,$2,$3,$4)',[inquiryId,name,email,message]);await client.query('INSERT INTO inquiry_client_access(inquiry_id,token_hash) VALUES($1,$2)',[inquiryId,accessHash]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
-   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
+   telegramNotice('Новое обращение BRILL TEAM\\nНомер: '+inquiryId+'\\nИмя: '+name+'\\nСообщение: '+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,inquiry_id:inquiryId,chat_token:accessToken});return
   }
   if(/^\/api\/client\/inquiries\/[a-f0-9-]{36}\/chat$/.test(url.pathname)&&['GET','POST'].includes(req.method)){
    const inquiryId=url.pathname.split('/')[4],token=req.headers['x-brill-chat-token'];
@@ -63,7 +106,7 @@ const server=http.createServer(async(req,res)=>{
    const data=await body(req),message=text(data.message,2000);
    if(!message||message.length>2000){fail(res,400,'Invalid message');return}
    const q=await pool.query("INSERT INTO inquiry_chat_messages(id,inquiry_id,sender_kind,message) VALUES($1,$2,'client',$3) RETURNING id,created_at",[crypto.randomUUID(),inquiryId,message]);
-   json(res,201,{ok:true,...q.rows[0]});return
+   telegramNotice('Сообщение клиента\\nОбращение: '+inquiryId+'\\n'+message.slice(0,700)+'\\nОтвет: /reply '+inquiryId+' текст');\n   json(res,201,{ok:true,...q.rows[0]});return
   }
   if(url.pathname==='/api/content'&&req.method==='GET'){
    const lang=url.searchParams.get('lang')||'ru';if(!validLang(lang)){fail(res,400,'Invalid language');return}

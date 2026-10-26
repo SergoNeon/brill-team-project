@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b0f">
+  <meta name="description" content="BRILL MEDIA — собственная редакция и студия продвижения проектов Brill Team Project.">
+  <title>BRILL MEDIA — Creative Operations</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <a href="#main" class="skip-link" data-i18n="skip">Перейти к содержимому</a>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar">
+      <a class="brand" href="?view=overview" aria-label="BRILL MEDIA" id="homeLink">
+        <span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-type"><strong>BRILL</strong><strong>MEDIA<span class="brand-dot">.</span></strong></span>
+      </a>
+      <p class="sidebar-caption">CREATIVE OPERATIONS</p>
+      <div class="sidebar-rule"></div>
+      <p class="nav-label" data-i18n="workspace">РАБОЧЕЕ ПРОСТРАНСТВО</p>
+      <nav aria-label="Разделы студии" id="mainNav">
+        <button type="button" class="nav-item active" data-view="overview" aria-current="page"><span class="nav-mark" aria-hidden="true">◧</span><span data-i18n="navOverview">Обзор</span></button>
+        <button type="button" class="nav-item" data-view="content"><span class="nav-mark" aria-hidden="true">▤</span><span data-i18n="navContent">Контент</span></button>
+        <button type="button" class="nav-item" data-view="calendar"><span class="nav-mark" aria-hidden="true">▦</span><span data-i18n="navCalendar">Календарь</span></button>
+        <button type="button" class="nav-item" data-view="projects"><span class="nav-mark" aria-hidden="true">◇</span><span data-i18n="navProjects">Проекты</span></button>
+        <button type="button" class="nav-item" data-view="about"><span class="nav-mark" aria-hidden="true">↗</span><span data-i18n="navAbout">О студии</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="studio-note"><span class="pulse" aria-hidden="true"></span><span data-i18n="demoOnly">Демонстрационный режим</span></div>
+        <p data-i18n="storageDisclosure">Изменения сохраняются только в этом браузере. Публикации в соцсети не отправляются.</p>
+        <a href="../index.html" class="back-link" data-i18n="backToBrill">← Brill Team Project</a>
+      </div>
+    </aside>
+
+    <div class="workspace-main">
+      <header class="topbar">
+        <div class="topbar-heading"><span>BRILL TEAM PROJECT</span><span class="topbar-slash">/</span><strong>MEDIA STUDIO</strong></div>
+        <div class="topbar-actions">
+          <div class="languages" role="group" aria-label="Language / Язык">
+            <button type="button" data-lang="ru" class="lang active" aria-pressed="true">RU</button>
+            <button type="button" data-lang="he" class="lang" aria-pressed="false">HE</button>
+            <button type="button" data-lang="en" class="lang" aria-pressed="false">EN</button>
+          </div>
+          <button type="button" class="button button-primary new-content" data-action="new"><span aria-hidden="true">＋</span> <span data-i18n="newContent">Новый материал</span></button>
+        </div>
+      </header>
+
+      <main id="main" tabindex="-1">
+        <section class="hero" id="hero">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-line"></span><span data-i18n="eyebrow">СОБСТВЕННАЯ МЕДИАСТУДИЯ · BRILL</span></p>
+            <h1 data-i18n-html="heroTitle">Не просто создавать.<br><em>Быть замеченными.</em></h1>
+            <p class="hero-description" data-i18n="heroText">Все наши идеи, продукты и истории — в одной редакции. Планируем, создаём и готовим продвижение без огромных рекламных бюджетов.</p>
+            <div class="hero-controls">
+              <button class="button button-primary" type="button" data-action="new" data-i18n="createBrief">Создать материал</button>
+              <button class="button button-outline" type="button" data-view="projects" data-i18n="exploreProjects">Наши проекты</button>
+            </div>
+            <p class="hero-footnote" data-i18n="heroFootnote">Внутренний инструмент · Без рекламных расходов · Без подключённых соцсетей</p>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="frame-corner corner-top"></div><div class="frame-corner corner-bottom"></div>
+            <span class="art-index">BRILL // SIGNAL</span>
+            <div class="art-axis"><span class="art-circle outer"></span><span class="art-circle middle"></span><span class="art-circle inner"></span><span class="signal-core">B<span>.</span></span></div>
+            <div class="art-bottom"><span>IDEA → STORY → IMPACT</span><span>STUDIO / 26</span></div>
+          </div>
+        </section>
+
+        <section id="view-overview" class="view" aria-labelledby="overviewHeading">
+          <div class="section-heading">
+            <div><p class="eyebrow" data-i18n="liveWorkspace">РЕДАКЦИОННЫЙ ПУЛЬТ</p><h2 id="overviewHeading" data-i18n="overviewTitle">Вся работа. В одном месте.</h2></div>
+            <span class="note-pill" data-i18n="demoData">ДЕМО-ДАННЫЕ</span>
+          </div>
+          <div class="stat-grid" id="statGrid"></div>
+          <div class="overview-columns">
+            <section class="panel" aria-labelledby="recentHeading">
+              <div class="panel-head"><div><p class="overline" data-i18n="productionQueue">ПРОИЗВОДСТВО</p><h3 id="recentHeading" data-i18n="recentHeading">Редакционная очередь</h3></div><button class="text-button" type="button" data-view="content" data-i18n="showAll">Все материалы →</button></div>
+              <div id="recentList"></div>
+            </section>
+            <section class="panel side-panel" aria-labelledby="channelsHeading">
+              <div class="panel-head"><div><p class="overline" data-i18n="channelsOverline">ПЛОЩАДКИ</p><h3 id="channelsHeading" data-i18n="channelsHeading">Где рассказываем</h3></div></div>
+              <div id="channelList"></div>
+              <p class="panel-footnote" data-i18n="channelDisclaimer">Количество запланированных идей, не реальные просмотры или публикации.</p>
+            </section>
+          </div>
+          <div class="mission-strip"><span class="mission-symbol" aria-hidden="true">✳</span><p data-i18n="mission">Наша задача — не просто больше контента. Наша задача — чтобы каждый материал работал на конкретный продукт.</p></div>
+        </section>
+
+        <section id="view-content" class="view" hidden aria-labelledby="contentHeading">
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="libraryOverline">МАТЕРИАЛЫ И КАМПАНИИ</p><h2 id="contentHeading" data-i18n="contentTitle">Контент-план</h2><p class="section-description" data-i18n="contentDescription">Рабочие черновики, проверки и запланированные материалы. Ничего не публикуется автоматически.</p></div></div>
+          <section class="panel">
+            <div class="filters">
+              <label class="search-wrap"><span class="sr-only" data-i18n="searchLabel">Поиск материалов</span><input type="search" id="searchInput" autocomplete="off" data-i18n-placeholder="searchPlaceholder" placeholder="Название или проект..."></label>
+              <label class="select-wrap"><span class="sr-only" data-i18n="filterLabel">Статус</span><select id="statusFilter" aria-label="Статус"><option value="all" data-i18n="allStatuses">Все статусы</option><option value="draft" data-i18n="draft">Черновик</option><option value="review" data-i18n="review">На проверке</option><option value="scheduled" data-i18n="scheduled">Запланировано</option></select></label>
+              <button type="button" class="button button-primary" data-action="new" data-i18n="addMaterial">Добавить материал</button>
+            </div>
+            <p class="list-count" id="contentCount" aria-live="polite"></p>
+            <div id="contentList" class="content-list"></div>
+          </section>
+        </section>
+
+        <section id="view-calendar" class="view" hidden aria-labelledby="calendarHeading">
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="scheduleOverline">ПЛАН ПУБЛИКАЦИЙ</p><h2 id="calendarHeading" data-i18n="calendarTitle">Календарь редакции</h2><p class="section-description" data-i18n="calendarDescription">Материалы с датой размещения. Это план — отправки в соцсети пока не подключены.</p></div></div>
+          <section class="panel"><div id="calendarList"></div></section>
+        </section>
+
+        <section id="view-projects" class="view" hidden aria-labelledby="projectsHeading">
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="ecosystemOverline">НАША ЭКОСИСТЕМА</p><h2 id="projectsHeading" data-i18n="projectsTitle">Каждому проекту — свой голос.</h2><p class="section-description" data-i18n="projectsDescription">Выбираем подходящий формат и аудиторию, не смешивая игровые, потребительские и B2B-продукты.</p></div></div>
+          <div id="projectGrid" class="projects-grid"></div>
+          <div class="notice-panel"><strong data-i18n="rightsHeading">Перед публикацией</strong><p data-i18n="rightsText">Материалы с чужими логотипами, кадрами, музыкой и вещательным контентом требуют проверки прав. В особенности SHELEG TV.</p></div>
+        </section>
+
+        <section id="view-about" class="view" hidden aria-labelledby="aboutHeading">
+          <div class="section-heading"><div><p class="eyebrow" data-i18n="studioOverline">СТРАТЕГИЯ BRILL MEDIA</p><h2 id="aboutHeading" data-i18n="aboutTitle">Сначала продвигаем своё. Затем — бизнес клиентов.</h2><p class="section-description" data-i18n="aboutDescription">Независимая студия внутри Brill Team Project: контент-стратегия, видеопродакшн, социальные площадки и аналитика в едином процессе.</p></div></div>
+          <div class="capabilities">
+            <article><span>CREATIVE</span><h3 data-i18n="capOneTitle">Контент и видео</h3><p data-i18n="capOneText">Трейлеры продуктов, короткие вертикальные видео, презентации и визуальные истории.</p></article>
+            <article><span>GROWTH</span><h3 data-i18n="capTwoTitle">Органический рост</h3><p data-i18n="capTwoText">Планирование каналов, сообществ, партнёрств и понятных целей без слепой закупки рекламы.</p></article>
+            <article><span>OPERATIONS</span><h3 data-i18n="capThreeTitle">Единый редакционный процесс</h3><p data-i18n="capThreeText">Путь от идеи до согласования и размещения. Сейчас работает локальное планирование; публикации и API — следующий этап.</p></article>
+          </div>
+          <div class="notice-panel"><strong data-i18n="nowHeading">Что доступно в этой версии</strong><p data-i18n="nowText">Просмотр проектов, создание и изменение материалов, фильтрация, календарь и переключение языков. Все записи хранятся локально в браузере; совместная работа и реальная статистика ещё не подключены.</p></div>
+        </section>
+      </main>
+      <footer class="footer"><span>© 2026 BRILL TEAM PROJECT · BRILL MEDIA</span><span data-i18n="footerDemo">PROTOTYPE · LOCAL DATA · NO AUTO PUBLISH</span></footer>
+    </div>
+  </div>
+
+  <div class="dialog-backdrop" id="editorBackdrop" hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="editorHeading" aria-describedby="editorHelp">
+      <div class="dialog-heading"><div><p class="overline" data-i18n="editorOverline">РЕДАКЦИОННАЯ КАРТОЧКА</p><h2 id="editorHeading" data-i18n="editorNew">Новый материал</h2></div><button class="close-icon" type="button" data-action="close-editor" aria-label="Закрыть">×</button></div>
+      <p class="dialog-help" id="editorHelp" data-i18n="editorHelp">Запись останется в этом браузере до подключения серверного кабинета.</p>
+      <form id="editorForm" novalidate>
+        <input id="recordId" type="hidden">
+        <div class="form-row"><label for="recordTitle" data-i18n="fieldTitle">Название материала *</label><input id="recordTitle" type="text" required maxlength="140" autocomplete="off"></div>
+        <div class="form-grid">
+          <div class="form-row"><label for="recordProject" data-i18n="fieldProject">Проект *</label><select id="recordProject" required></select></div>
+          <div class="form-row"><label for="recordChannel" data-i18n="fieldChannel">Канал *</label><select id="recordChannel" required><option>YouTube</option><option>TikTok</option><option>Instagram</option><option>Facebook</option><option>Telegram</option><option>LinkedIn</option></select></div>
+          <div class="form-row"><label for="recordLanguage" data-i18n="fieldLanguage">Язык *</label><select id="recordLanguage" required><option value="ru">Русский</option><option value="he">עברית</option><option value="en">English</option></select></div>
+          <div class="form-row"><label for="recordStatus" data-i18n="fieldStatus">Статус *</label><select id="recordStatus" required><option value="draft" data-i18n="draft">Черновик</option><option value="review" data-i18n="review">На проверке</option><option value="scheduled" data-i18n="scheduled">Запланировано</option></select></div>
+          <div class="form-row"><label for="recordDate" data-i18n="fieldDate">Плановая дата</label><input id="recordDate" type="date"></div>
+        </div>
+        <div class="form-row"><label for="recordNotes" data-i18n="fieldNotes">Описание / идея</label><textarea id="recordNotes" rows="4" maxlength="2000"></textarea></div>
+        <p id="formError" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions"><button class="button button-quiet" type="button" data-action="close-editor" data-i18n="cancel">Отмена</button><button class="button button-primary" type="submit" data-i18n="save">Сохранить материал</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="dialog-backdrop" id="deleteBackdrop" hidden>
+    <section class="dialog dialog-small" role="alertdialog" aria-modal="true" aria-labelledby="deleteHeading" aria-describedby="deleteDescription">
+      <div class="dialog-heading"><h2 id="deleteHeading" data-i18n="deleteHeading">Удалить материал?</h2><button class="close-icon" type="button" data-action="close-delete" aria-label="Закрыть">×</button></div>
+      <p id="deleteDescription" class="dialog-help"></p>
+      <div class="dialog-actions"><button class="button button-quiet" type="button" data-action="close-delete" data-i18n="cancel">Отмена</button><button class="button button-danger" type="button" id="confirmDelete" data-i18n="delete">Удалить</button></div>
+    </section>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+name: BRILL MEDIA static QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/brill-media-studio
+    paths:
+      - "media/**"
+      - ".github/workflows/brill-media-checks.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "media/**"
+      - ".github/workflows/brill-media-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static-and-domain-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out GitHub branch
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check media JavaScript syntax
+        run: |
+          node --check media/model.mjs
+          node --check media/app.mjs
+      - name: Run media domain tests
+        run: node --test media/tests/model.test.mjs
+      - name: Check public studio scripts
+        run: |
+          node --check media/site/site.js
+          node --check media/site/page-copy.js
+          node --check media/site/next.js
+          node --check media/site/home-extra.js
+      - name: Test published-page structure and tools
+        run: node --test media/site/tests/static.test.mjs
+      - name: No unapproved third-party assets or publishing integrations
+        run: |
+          ! grep -R -E '(api\.(tiktok|instagram|facebook)\.com|youtube\.googleapis\.com|https?://.*\.woff)' media/index.html media/app.mjs media/styles.css

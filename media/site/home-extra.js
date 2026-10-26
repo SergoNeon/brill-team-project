@@ -1,0 +1,1 @@
+(()=>{const c=window.BRILL_EXTRA_COPY||{};function translate(){const lang=document.documentElement.lang||"ru";document.querySelectorAll("[data-extra]").forEach(el=>el.textContent=(c[lang]||c.ru||{})[el.dataset.extra]||el.dataset.extra)}translate();document.querySelectorAll("[data-language]").forEach(b=>b.addEventListener("click",()=>queueMicrotask(translate)));})();

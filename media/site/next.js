@@ -11,7 +11,7 @@ const channels=["Instagram","TikTok","YouTube","Telegram","Facebook","LinkedIn"]
 let onLangChange=()=>{};
 function translate(next){
  if(!copy[next])return;lang=next;document.documentElement.lang=lang;document.documentElement.dir=lang==="he"?"rtl":"ltr";
- $$("[data-x]").forEach(el=>{el.textContent=t(el.dataset.x)});
+ $("[data-x]").forEach(el=>{el.textContent=t(el.dataset.x)});$("[data-k]").forEach(el=>{el.textContent=({ru:{serviceVideo:"Видео и трейлеры",serviceSocial:"Социальные сети",serviceBrand:"Брендинг и дизайн",serviceStrategy:"Стратегия продвижения"},en:{serviceVideo:"Film and trailers",serviceSocial:"Social media",serviceBrand:"Branding and design",serviceStrategy:"Content strategy"},he:{serviceVideo:"וידאו וטריילרים",serviceSocial:"רשתות חברתיות",serviceBrand:"מיתוג ועיצוב",serviceStrategy:"אסטרטגיית תוכן"}}[lang]||{})[el.dataset.k]||el.dataset.k});
  $$("[data-language]").forEach(el=>{const selected=el.dataset.language===lang;el.classList.toggle("active",selected);el.setAttribute("aria-pressed",String(selected))});
  const p=document.body.dataset.page;document.title=t({portfolio:"pagePortfolioTitle",reel:"pageReelTitle",tools:"pageToolsTitle",services:"pageServicesTitle"}[p]||"pagePortfolioTitle");
  try{localStorage.setItem(langKey,lang)}catch{}
@@ -65,7 +65,7 @@ if(page==="tools"){
  const meta=document.createElement("p");meta.textContent=row.audience+" · "+(row.date||"—");
  const actions=document.createElement("div");actions.className="draft-actions";
  const copy=document.createElement("button");copy.type="button";copy.className="link-btn";copy.textContent=t("toolCopy");copy.addEventListener("click",()=>copyToClipboard(row.text));
- const remove=document.createElement("button");remove.type="button";remove.className="link-btn danger";remove.textContent=t("toolDelete");remove.addEventListener("click",()=>{delId=row.id;const approved=window.confirm(t("toolDeleteConfirm"));if(approved){drafts=drafts.filter(x=>x.id!==delId);save();render();toast(t("toolDeletedNotice"))}});
+ const remove=document.createElement("button");remove.type="button";remove.className="link-btn danger";remove.textContent=t("toolDelete");remove.addEventListener("click",()=>{delId=row.id;const approved=remove.dataset.confirmed==="true";if(!approved){remove.dataset.confirmed="true";remove.textContent=t("toolConfirmDelete");remove.focus();return}drafts=drafts.filter(x=>x.id!==delId);save();render();toast(t("toolDeletedNotice"));});
  actions.append(copy,remove);e.append(title,meta,actions);box.append(e);
  });
  }

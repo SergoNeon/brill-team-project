@@ -9,8 +9,8 @@
   <title>BRILL MEDIA — Контент, который замечают</title>
   <link rel="icon" href="./assets/brand-mark.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
-  <link rel="stylesheet" href="./styles.css">
-  <script defer src="./site.js"></script>
+  <link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./next.css">
+  <script defer src="./site.js"></script><script defer src="./page-copy.js"></script><script defer src="./home-extra.js"></script>
 </head>
 <body>
   <a href="#main" class="skip-link" data-t="skip">Перейти к содержимому</a>
@@ -21,10 +21,10 @@
         <span class="brand-type"><strong>BRILL</strong><span>MEDIA</span></span>
       </a>
       <nav class="primary-nav" id="primary-nav" aria-label="Основная навигация" data-aria-label="navLabel">
-        <a href="#services" data-t="navServices">Услуги</a>
-        <a href="#work" data-t="navWork">Проекты</a>
+        <a href="./services.html" data-t="navServices">Услуги</a>
+        <a href="./portfolio.html" data-t="navWork">Проекты</a>
         <a href="#studio" data-t="navStudio">О студии</a>
-        <a href="#contact" data-t="navContact">Контакты</a>
+        <a href="#contact" data-t="navContact">Контакты</a><a href="./reel.html" data-extra="navReel">Презентация</a><a href="./tools.html" data-extra="navTools">Инструменты</a>
       </nav>
       <div class="header-right">
         <div class="languages" role="group" aria-label="Выбор языка" data-aria-label="languageLabel">
@@ -50,7 +50,7 @@
           <h1 id="hero-title"><span data-t="heroLineA">Идеи заслуживают</span><em data-t="heroLineB">внимания.</em></h1>
           <p class="hero-lede" data-t="heroLede">BRILL MEDIA — студия контента и продвижения. Превращаем идеи в визуальные истории, которые хочется смотреть, обсуждать и запоминать.</p>
           <div class="hero-actions">
-            <a class="btn btn-gold" href="#work"><span data-t="heroPrimary">Смотреть проекты</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-7-7 7 7-7 7"/></svg></a>
+            <a class="btn btn-gold" href="./portfolio.html"><span data-t="heroPrimary">Смотреть проекты</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-7-7 7 7-7 7"/></svg></a>
             <a class="btn btn-outline" href="#services"><span data-t="heroSecondary">Что мы создаём</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-7-7 7 7-7 7"/></svg></a>
           </div>
         </div>
@@ -118,6 +118,16 @@
       </div>
     </section>
 
+    <section class="next-showcase section-pad" aria-labelledby="next-showcase-title">
+      <div class="container next-showcase-grid">
+        <div class="next-showcase-image"><img loading="lazy" src="https://images.unsplash.com/photo-1650765814773-d99b321a0124?auto=format&amp;fit=crop&amp;w=1000&amp;q=82" alt=""></div>
+        <div class="next-showcase-copy"><p class="eyebrow" data-extra="homeReelEyebrow">BRILL MEDIA / В ДВИЖЕНИИ</p><h2 id="next-showcase-title" data-extra="homeReelTitle">Каждая идея — история в движении.</h2><p data-extra="homeReelText">Посмотрите короткую motion-презентацию студии и направления наших проектов.</p><a href="./reel.html" class="btn btn-gold" data-extra="viewReel">Смотреть презентацию</a></div>
+      </div>
+    </section>
+    <section class="next-toolstrip" aria-labelledby="next-tools-title"><div class="container next-toolstrip-inner">
+       <div><p class="eyebrow" data-extra="homeToolsEyebrow">ТВОРЧЕСТВО И ПРАКТИКА</p><h2 id="next-tools-title" data-extra="homeToolsTitle">От идеи — к готовому плану.</h2><p data-extra="homeToolsText">Соберите рекламный бриф, план материалов и UTM-ссылки для кампаний.</p><span class="next-disclaimer" data-extra="homeToolsCaveat">Черновики сохраняются в браузере. Автопубликация не подключена.</span></div>
+       <a href="./tools.html" class="btn btn-outline" data-extra="exploreTools">Открыть инструменты</a>
+    </div></section>
     <section id="studio" class="studio section-pad" aria-labelledby="studio-title">
       <div class="container studio-grid">
         <div class="studio-image">

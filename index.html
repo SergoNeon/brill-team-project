@@ -204,6 +204,9 @@ html[dir="rtl"] .logic-left{border-right:0;border-left:1px solid #37404a}
 html[dir="rtl"] .stage-feature-row,html[dir="rtl"] .logic-content,html[dir="rtl"] .stage-board-body{direction:ltr}
 html[dir="rtl"] .studio-products{direction:rtl}
 @media(prefers-reduced-motion:reduce){.stage-board,.mobile-screen,.logic-window{transition:none}}
+
+/* Final desktop composition: override legacy display:block!important. */
+@media(min-width:821px){.studio-hero .hero-content{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.92fr)!important;gap:30px!important;align-items:center!important}.studio-hero .hero-title{font-size:clamp(46px,4.3vw,70px)!important}.studio-stage{min-height:530px}.stage-board{width:91%}.stage-phone{right:-4px}}
 </style></head><body>
 <header class="site-header"><div class="wrap head-inner"><a class="brand brand-wordmark" href="#home" aria-label="BRILL TEAM PROJECT"><span class="wordmark-brill">BRILL</span><span class="wordmark-team">TEAM</span><span class="wordmark-project">PROJECT</span></a><nav class="nav" id="nav" aria-label="Main navigation"><a href="#home" data-t="home"></a><a href="#products" data-t="expertise"></a><a href="#portfolio" data-t="portfolioTitle"></a><a href="#about" data-t="about"></a><a href="#news" data-t="news"></a><a href="#contact" data-t="contact"></a></nav><div class="langs"><button class="lang" data-lang="ru" aria-pressed="true">RU</button><button class="lang" data-lang="he" aria-pressed="false">HE</button><button class="lang" data-lang="en" aria-pressed="false">EN</button></div><a class="header-link" href="#contact"><span>↗</span><span data-t="discuss"></span></a><button class="menu" id="menu" aria-controls="nav" aria-expanded="false" aria-label="Open menu">☰</button></div></header>
 <main><section class="hero studio-hero" id="home">

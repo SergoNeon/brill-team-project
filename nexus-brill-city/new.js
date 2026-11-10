@@ -1,0 +1,13 @@
+'use strict';
+const address='77.42.93.209:22205';
+const menu=document.getElementById('menu-toggle'),nav=document.getElementById('site-nav'),toast=document.getElementById('toast');
+let toastTimer;
+function notify(message){toast.textContent=message;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.hidden=true,2600)}
+menu.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open));menu.setAttribute('aria-label',open?'Закрыть меню':'Открыть меню')});
+nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}});
+async function copyIP(){try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(address);else{const el=document.createElement('textarea');el.value=address;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();if(!document.execCommand('copy'))throw Error('copy failed');el.remove()}notify('IP-адрес скопирован')}catch(e){notify('Адрес сервера: '+address)}}
+document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',copyIP));
+async function loadStatus(){const n=document.getElementById('game-status');try{const r=await fetch('api/status',{cache:'no-store'});if(!r.ok)throw Error('unavailable');const d=await r.json();n.replaceChildren();const dot=document.createElement('span');dot.className='status-dot '+(d.process_active?'up':'down');n.append(dot,document.createTextNode(d.process_active?'Процесс запущен':'Не обнаружен'))}catch(e){n.textContent='Нет данных'}}
+async function loadNews(){const n=document.getElementById('news-preview');try{const r=await fetch('api/news',{cache:'no-store'});if(!r.ok)throw Error('unavailable');const d=await r.json();n.replaceChildren();if(!d.news?.length){n.append(document.createElement('p')).textContent='Пока нет опубликованных новостей.';return}for(const item of d.news.slice(0,3)){const a=document.createElement('article'),dt=document.createElement('small'),h=document.createElement('h3'),p=document.createElement('p');dt.textContent=new Date(item.created*1000).toLocaleDateString('ru-RU');h.textContent=item.title;p.textContent=item.body;a.append(dt,h,p);n.append(a)}}catch(e){n.textContent='Новости временно недоступны.'}}
+loadStatus();loadNews();

@@ -1,0 +1,62 @@
+
+/* NEXUS editorial refresh — no boxed dashboard aesthetic */
+:root{--bg:#0c0d10;--surface:#111216;--edge:#303039;--gold:#d5b58c;--red:#9f2431}
+body{font-family:Manrope,Arial,sans-serif;letter-spacing:-.008em}
+.top{background:#0b0b0eea;border-bottom:1px solid #ffffff18}
+.logo-symbol{background:transparent;border:0;width:auto;height:auto;font-size:32px;letter-spacing:-5px;margin-right:8px}
+.logo-title{letter-spacing:2px;font-weight:800}
+.top-cta{background:transparent;border:1px solid #b9a48d;border-radius:0;padding:10px 18px}
+.top-cta:hover{background:#d5b58c;color:#111}
+.nav a{font-size:12px;letter-spacing:.015em}
+.hero{min-height:690px}
+.hero:before{background:linear-gradient(90deg,#090a0cf5 0%,#090a0cba 40%,#090a0c24 100%),linear-gradient(0deg,#0c0d10 1%,transparent 48%),url('assets/los-santos-night.jpg') center 48%/cover}
+.hero-layout{min-height:645px;grid-template-columns:1fr 310px;align-items:center;gap:8vw}
+.hero h1{font-size:clamp(56px,6.7vw,106px);line-height:.99;letter-spacing:-.065em;margin:20px 0 28px}
+.hero h1 span{color:#e3d1ba}
+.hero-copy{font-size:15px;max-width:455px}
+.eyebrow{letter-spacing:2px;font-size:10px}
+.btn{border-radius:0;min-height:48px;padding:14px 23px}
+.btn-red{background:#a42632}
+.btn-line{border-color:#a6a4a6;background:transparent}
+.hero-panel{background:transparent;backdrop-filter:none;border:0;border-left:1px solid #ffffff68;border-radius:0;padding:5px 0 5px 26px}
+.hero-panel-label{color:#d9bd96}
+.hero-panel-address{font-size:22px;letter-spacing:-.04em}
+.hero-panel .btn{margin-top:28px;background:#e5d3bb;color:#161417;border:0;font-weight:900}
+.hero-panel .btn:hover{background:white}
+.hero-stat{border-top:1px solid #ffffff4d}
+.hero-footer{border-top:1px solid #ffffff20;background:transparent}
+.section{padding:112px 0}
+.section.alt{background:#111216}
+.section-head{margin-bottom:43px}
+.section-head p{line-height:1.9}
+.editorial{grid-template-columns:1.13fr 1fr;gap:7vw}
+.editorial-media{border-radius:0;min-height:480px}
+.editorial-text{gap:22px}
+.editorial-text h2{font-size:clamp(30px,3.4vw,51px)}
+.service-grid{grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid #ffffff2b}
+.service-card{background:transparent;border:0;border-bottom:1px solid #ffffff2b;border-right:1px solid #ffffff20;border-radius:0;min-height:190px;padding:34px 29px 31px 0;gap:10px;transition:background .2s}
+.service-card:nth-child(3n){border-right:0;padding-left:27px}
+.service-card:nth-child(3n + 2){padding-left:27px}
+.service-card:hover{transform:none;background:#ffffff07;border-color:#ffffff45}
+.service-card .glyph{display:none}
+.service-card h3{font-size:21px;margin-top:0}
+.service-card p{max-width:280px;font-size:13px;line-height:1.9}
+.service-card .arrow{font-size:11px;align-self:flex-start}
+.news-grid{gap:24px}
+.news-card{background:transparent;border:0;border-top:1px solid #66616a;border-radius:0;padding:23px 0 20px;min-height:220px}
+.news-card h3{font-size:20px}
+.news-card p{font-size:13px}
+.cta-banner{background:linear-gradient(100deg,#24181a,#0c0d10);border-color:#564040}
+.page-head{background:linear-gradient(90deg,#0d0e11f0,#0d0e11b9),url('assets/los-santos-night.jpg') center/cover}
+.article{border:0;border-top:1px solid #414149;background:transparent;border-radius:0;padding:28px 0}
+.side-index{background:transparent;border:0;border-top:1px solid #57535b;border-radius:0;padding:8px 0}
+.side-index a,.side-index button{border-radius:0}
+.faction-grid{gap:0;border-top:1px solid #494950}
+.faction-card{border:0;border-bottom:1px solid #494950;border-radius:0;background:transparent;padding:35px 25px 30px 0}
+.faction-card:nth-child(even){padding-left:30px}
+.faction-card h3{font-size:25px}
+.filter{border-radius:0}
+.form-panel{background:transparent;border:0;border-top:1px solid #48464b;border-radius:0;padding:28px 0}
+.footer{background:#090a0c}
+@media(max-width:800px){.hero{min-height:0}.hero-layout{min-height:0;gap:40px}.hero h1{font-size:clamp(49px,10vw,76px)}.hero-panel{max-width:100%;padding:5px 0 5px 21px}.section{padding:72px 0}.editorial{gap:35px}.service-grid{grid-template-columns:repeat(2,1fr)}.service-card:nth-child(n){padding:25px 20px 24px 0;border-right:0}.service-card:nth-child(2n){padding-left:20px}.news-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.hero-layout{padding:74px 0 63px}.hero h1{font-size:clamp(48px,13vw,68px);margin:17px 0 25px}.hero-copy{font-size:14px}.hero-panel{border-left:1px solid #c2aa8a}.section{padding:66px 0}.service-grid{grid-template-columns:1fr}.service-card:nth-child(n){padding:25px 0;border-right:0;min-height:0}.service-card h3{font-size:19px}.news-grid{grid-template-columns:1fr}.news-card{min-height:0}.editorial-media{min-height:300px}.faction-grid{grid-template-columns:1fr}.faction-card:nth-child(n){padding:27px 0}.menu-btn{border-radius:0}.top-cta{font-size:10px;padding:8px 10px}.logo-title{font-size:14px}}

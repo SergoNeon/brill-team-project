@@ -21,6 +21,7 @@ def init():
         CREATE TABLE IF NOT EXISTS applications(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,faction TEXT NOT NULL,character_name TEXT NOT NULL,experience TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'На рассмотрении',created INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS news(id INTEGER PRIMARY KEY,title TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS support_tickets(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,topic TEXT NOT NULL,subject TEXT NOT NULL,message TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'Открыто',staff_reply TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,updated INTEGER NOT NULL);
         """)
         db.execute('INSERT OR IGNORE INTO settings(k,v) VALUES(?,?)',('rules',json.dumps(['Уважайте других игроков и администрацию.','Запрещены читы и эксплуатация ошибок.','Соблюдайте правила RolePlay.','Запрещены оскорбления и дискриминация.','Решения администрации можно обжаловать установленным порядком.'],ensure_ascii=False)))
         if not db.execute('SELECT 1 FROM news').fetchone():
@@ -92,6 +93,15 @@ class Handler(BaseHTTPRequestHandler):
             if path=='me':
                 u=session_user(self.headers.get('Cookie',''))
                 return self.send(data={'user':u,'linked_to_game':False})
+            if path=='tickets':
+                u=self.require()
+                with connect() as db: rows=[dict(x) for x in db.execute('SELECT id,topic,subject,message,status,staff_reply,created,updated FROM support_tickets WHERE user_id=? ORDER BY updated DESC LIMIT 60',(u['id'],))]
+                return self.send(data={'tickets':rows})
+            if path=='admin/tickets':
+                u=self.require()
+                if u['role']!='admin':raise PermissionError('Только администрация')
+                with connect() as db: rows=[dict(x) for x in db.execute('SELECT t.id,t.topic,t.subject,t.message,t.status,t.staff_reply,t.created,t.updated,u.username FROM support_tickets t JOIN users u ON u.id=t.user_id ORDER BY t.updated DESC LIMIT 150')]
+                return self.send(data={'tickets':rows})
             if path=='applications':
                 u=self.require()
                 with connect() as db:
@@ -108,7 +118,7 @@ class Handler(BaseHTTPRequestHandler):
                 u=self.require()
                 if u['role']!='admin':raise PermissionError('Только администрация')
                 with connect() as db:
-                    counts={'users':db.execute('SELECT COUNT(*) FROM users').fetchone()[0],'applications':db.execute('SELECT COUNT(*) FROM applications').fetchone()[0],'pending':db.execute("SELECT COUNT(*) FROM applications WHERE status='На рассмотрении'").fetchone()[0],'news':db.execute('SELECT COUNT(*) FROM news').fetchone()[0]}
+                    counts={'users':db.execute('SELECT COUNT(*) FROM users').fetchone()[0],'applications':db.execute('SELECT COUNT(*) FROM applications').fetchone()[0],'pending':db.execute("SELECT COUNT(*) FROM applications WHERE status='На рассмотрении'").fetchone()[0],'news':db.execute('SELECT COUNT(*) FROM news').fetchone()[0],'tickets':db.execute("SELECT COUNT(*) FROM support_tickets WHERE status!='Закрыто'").fetchone()[0]}
                 return self.send(data={'counts':counts})
             if path=='admin/applications':
                 u=self.require()
@@ -170,6 +180,28 @@ class Handler(BaseHTTPRequestHandler):
                 if not (3<=len(name)<=70 and 15<=len(experience)<=1500):raise ValueError('Укажите имя персонажа и информацию о себе (минимум 15 символов)')
                 with connect() as db:db.execute('INSERT INTO applications(user_id,faction,character_name,experience,created) VALUES(?,?,?,?,?)',(u['id'],faction,name,experience,int(time.time())))
                 return self.send(201,{'ok':True})
+            if path=='tickets':
+                u=self.require()
+                topic=str(data.get('topic','')).strip()
+                subject=str(data.get('subject','')).strip()
+                message=str(data.get('message','')).strip()
+                if topic not in ('Техническая проблема','Жалоба','Апелляция','Вопрос по игре','Другое'):raise ValueError('Укажите тему обращения')
+                if not 5<=len(subject)<=130 or not 20<=len(message)<=3500:raise ValueError('Заголовок от 5 символов, описание от 20 символов')
+                with connect() as db:
+                    recent=db.execute('SELECT COUNT(*) FROM support_tickets WHERE user_id=? AND created>?',(u['id'],int(time.time())-3600)).fetchone()[0]
+                    if recent>=5:raise RuntimeError('Не более 5 обращений в час')
+                    db.execute('INSERT INTO support_tickets(user_id,topic,subject,message,created,updated) VALUES(?,?,?,?,?,?)',(u['id'],topic,subject,message,int(time.time()),int(time.time())))
+                return self.send(201,{'ok':True})
+            if path=='admin/ticket/reply':
+                u=self.require()
+                if u['role']!='admin':raise PermissionError('Только администрация')
+                status=str(data.get('status','')).strip()
+                reply=str(data.get('staff_reply','')).strip()
+                if status not in ('Открыто','В работе','Закрыто') or len(reply)>3500:raise ValueError('Недопустимые данные')
+                with connect() as db:
+                    cur=db.execute('UPDATE support_tickets SET status=?,staff_reply=?,updated=? WHERE id=?',(status,reply,int(time.time()),int(data.get('id',0))))
+                    if cur.rowcount==0:raise ValueError('Обращение не найдено')
+                return self.send(data={'ok':True})
             if path=='admin/decision':
                 u=self.require()
                 if u['role']!='admin':raise PermissionError('Только администрация')

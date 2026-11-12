@@ -60,3 +60,12 @@ body{font-family:Manrope,Arial,sans-serif;letter-spacing:-.008em}
 .footer{background:#090a0c}
 @media(max-width:800px){.hero{min-height:0}.hero-layout{min-height:0;gap:40px}.hero h1{font-size:clamp(49px,10vw,76px)}.hero-panel{max-width:100%;padding:5px 0 5px 21px}.section{padding:72px 0}.editorial{gap:35px}.service-grid{grid-template-columns:repeat(2,1fr)}.service-card:nth-child(n){padding:25px 20px 24px 0;border-right:0}.service-card:nth-child(2n){padding-left:20px}.news-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.hero-layout{padding:74px 0 63px}.hero h1{font-size:clamp(48px,13vw,68px);margin:17px 0 25px}.hero-copy{font-size:14px}.hero-panel{border-left:1px solid #c2aa8a}.section{padding:66px 0}.service-grid{grid-template-columns:1fr}.service-card:nth-child(n){padding:25px 0;border-right:0;min-height:0}.service-card h3{font-size:19px}.news-grid{grid-template-columns:1fr}.news-card{min-height:0}.editorial-media{min-height:300px}.faction-grid{grid-template-columns:1fr}.faction-card:nth-child(n){padding:27px 0}.menu-btn{border-radius:0}.top-cta{font-size:10px;padding:8px 10px}.logo-title{font-size:14px}}
+
+.city-story{display:grid;grid-template-columns:1.05fr .95fr;min-height:550px;background:#171318}
+.city-story-photo{min-height:550px;background:linear-gradient(90deg,#0b0c0f15,#17131848),url('assets/nexus-city-scene.jpg') center/cover}
+.city-story-content{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(40px,6vw,110px)}
+.city-story-content h2{font-size:clamp(39px,4.5vw,72px);letter-spacing:-.055em;margin:25px 0 27px;line-height:1.08}
+.city-story-content h2 em{font-style:normal;color:#d7b992}
+.city-story-content p{font-size:14px;line-height:2;color:#c1b9b9;max-width:480px;margin-bottom:31px}
+@media(max-width:800px){.city-story{grid-template-columns:1fr}.city-story-photo{min-height:350px}.city-story-content{padding:55px 28px 65px}.city-story-content h2{font-size:48px}}
+@media(max-width:520px){.city-story-photo{min-height:270px}.city-story-content{padding:43px 19px 55px}.city-story-content h2{font-size:41px}.city-story-content p{font-size:13px}}

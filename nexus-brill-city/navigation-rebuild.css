@@ -1,0 +1,70 @@
+/* NEXUS BRILL CITY — real navigation, no icon-only side rail. */
+:root{--aside:0px}
+.app{display:block!important;min-height:100vh}
+.sidebar{position:relative!important;top:auto!important;left:auto!important;bottom:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:79px!important;min-height:79px!important;background:#101114!important;border-right:0!important;border-bottom:1px solid #484148!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px;box-shadow:none!important;z-index:22!important}
+.sidebar .identity{height:100%!important;min-height:0!important;flex-shrink:0!important;display:flex!important;align-items:center!important;padding:0 27px!important;border-bottom:0!important;text-decoration:none!important}
+.sidebar .brand-mark{font-size:31px!important;margin-right:5px!important}
+.sidebar .brand-name{font-size:16px!important;white-space:nowrap}
+.sidebar .navlinks{display:flex!important;position:static!important;top:auto!important;flex:1 1 auto!important;min-width:0!important;flex-direction:row!important;align-items:stretch!important;gap:1px!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:thin!important;scrollbar-color:#484046 transparent!important;padding:0 24px 0 5px!important;margin:0!important;max-height:none!important;box-shadow:none!important;background:transparent!important}
+.sidebar .nav-caption,.sidebar .sidefooter{display:none!important}
+.sidebar .navlink{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 auto!important;white-space:nowrap!important;width:auto!important;min-height:56px!important;padding:0 15px!important;margin:0!important;font-size:12px!important;font-weight:700!important;line-height:1.3!important;text-align:center!important;color:#bebac0!important;background:transparent!important;border-radius:0!important;border:0!important;border-bottom:2px solid transparent!important;text-decoration:none!important;transition:color .15s,border-color .15s!important}
+.sidebar .navlink>span:first-child:not(.navbadge){display:none!important}
+.sidebar .navlink.active{border:0!important;border-bottom:2px solid #d1b38b!important;background:transparent!important;color:#f3eee7!important;padding:0 15px!important}
+.sidebar .navlink:hover{background:transparent!important;color:#f2e6d7!important;border-bottom-color:#74635c!important}
+.sidebar .navbadge{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:8px!important;min-width:21px!important;border-radius:4px!important;padding:2px 5px!important;background:#4d2930!important;color:#f9e7e2!important;font-size:10px!important}
+.sidebar .navlink[hidden]{display:none!important}
+.mobile-nav-button{display:none;border:1px solid #4d484b;background:transparent;color:#eee7e0;border-radius:0;font-weight:700;padding:9px 13px;min-height:40px;font-size:12px}
+.mobile-nav-button span{font-size:15px;margin-left:10px;color:#d1b38b}
+.main{width:100%!important;min-width:0!important}
+.main>.topbar{height:58px!important;min-height:58px!important;border-bottom:1px solid #28292d!important;background:#131419!important;padding:0 max(24px,calc((100% - 1260px)/2))!important}
+.main .breadcrumbs{font-size:11px!important;letter-spacing:.015em!important}
+.main .account-chip{background:transparent!important;border:0!important;border-bottom:1px solid #8d7363!important;border-radius:0!important;padding:9px 0!important}
+.content{max-width:1260px!important;padding-top:36px!important}
+.mobile-scrim.visible{background:#0009!important;z-index:21!important}
+@media(max-width:1020px) and (min-width:761px){
+.sidebar .identity{padding:0 18px!important}
+.sidebar .navlink{padding:0 11px!important;font-size:11px!important}
+.sidebar .navlink.active{padding:0 11px!important}
+}
+@media(max-width:760px){
+.sidebar{height:67px!important;min-height:67px!important;flex-wrap:nowrap!important;justify-content:space-between!important;position:relative!important;transform:none!important}
+.sidebar.open{transform:none!important;left:auto!important}
+.sidebar .identity{height:66px!important;padding:0 18px!important}
+.sidebar .brand-name{font-size:14px!important}
+.sidebar .brand-mark{font-size:27px!important}
+.mobile-nav-button{display:flex!important;align-items:center!important;margin:0 18px 0 auto!important;flex-shrink:0!important}
+#legacyMobileMenu{display:none!important}
+.sidebar .navlinks{display:none!important;position:absolute!important;top:66px!important;left:0!important;right:0!important;width:100%!important;flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:calc(100dvh - 66px)!important;gap:0!important;align-items:stretch!important;padding:9px 18px 22px!important;background:#151519!important;border-bottom:1px solid #585056!important;box-shadow:0 22px 38px #0009!important;z-index:24!important}
+.sidebar.open .navlinks{display:flex!important}
+.sidebar .navlink,.sidebar .navlink.active{display:flex!important;justify-content:space-between!important;min-height:48px!important;width:100%!important;padding:12px 12px!important;text-align:left!important;font-size:14px!important;border-bottom:1px solid #313037!important;color:#e5e0dd!important}
+.sidebar .navlink.active{border-left:3px solid #cbb08d!important;border-bottom:1px solid #313037!important;padding-left:9px!important;background:#ffffff0a!important}
+.sidebar .navlink:hover{border-bottom:1px solid #313037!important;background:#ffffff09!important}
+.main>.topbar{height:50px!important;min-height:50px!important;padding:0 19px!important}
+.main .breadcrumbs{max-width:190px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.main .account-chip{max-width:136px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px!important}
+.content{padding:23px 19px 52px!important}
+}
+@media(max-width:420px){.sidebar .identity{padding:0 14px!important}.mobile-nav-button{margin-right:14px!important}.sidebar .brand-mark{font-size:24px!important}.sidebar .brand-name{font-size:13px!important}}
+
+/* Finish responsive navigation and wordmark */
+.sidebar .brand-mark{display:inline-flex!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;gap:0!important;min-width:39px!important;line-height:1!important;letter-spacing:-.09em!important}
+.sidebar .brand-mark span{display:inline!important;position:static!important;color:#c43a46!important;font-size:inherit!important;line-height:1!important;margin:0!important;transform:none!important}
+.mobile-scrim.visible{display:block!important;position:fixed!important;inset:0!important;z-index:21!important;background:#000a!important}
+@media(max-width:1100px){
+.sidebar{height:67px!important;min-height:67px!important;flex-wrap:nowrap!important;justify-content:space-between!important;position:relative!important;transform:none!important}
+.sidebar.open{transform:none!important;left:auto!important}
+.sidebar .identity{height:66px!important;padding:0 18px!important}
+.sidebar .brand-name{font-size:14px!important}
+.sidebar .brand-mark{font-size:27px!important}
+.mobile-nav-button{display:flex!important;align-items:center!important;margin:0 18px 0 auto!important;flex-shrink:0!important}
+#legacyMobileMenu{display:none!important}
+.sidebar .navlinks{display:none!important;position:absolute!important;top:66px!important;left:0!important;right:0!important;width:100%!important;flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important;max-height:calc(100dvh - 66px)!important;gap:0!important;align-items:stretch!important;padding:9px 18px 22px!important;background:#151519!important;border-bottom:1px solid #585056!important;box-shadow:0 22px 38px #0009!important;z-index:24!important}
+.sidebar.open .navlinks{display:flex!important}
+.sidebar .navlink,.sidebar .navlink.active{display:flex!important;justify-content:space-between!important;min-height:48px!important;width:100%!important;padding:12px 12px!important;text-align:left!important;font-size:14px!important;border-bottom:1px solid #313037!important;color:#e5e0dd!important}
+.sidebar .navlink.active{border-left:3px solid #cbb08d!important;border-bottom:1px solid #313037!important;padding-left:9px!important;background:#ffffff0a!important}
+.sidebar .navlink:hover{border-bottom:1px solid #313037!important;background:#ffffff09!important}
+.main>.topbar{height:50px!important;min-height:50px!important;padding:0 19px!important}
+.main .breadcrumbs{max-width:210px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.main .account-chip{max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px!important}
+.content{padding:23px 19px 52px!important}
+}

@@ -8,11 +8,11 @@ async function api(path,options={}){const r=await fetch(API+path,{credentials:'s
 function post(path,obj){return api(path,{method:'POST',body:JSON.stringify(obj)})}
 function formData(form){return Object.fromEntries(new FormData(form).entries())}
 function date(seconds){return new Date(seconds*1000).toLocaleDateString('ru-RU')}
-function mobileClose(){$('sidebar').classList.remove('open');$('scrim').classList.remove('visible')}
+function mobileClose(){$('sidebar').classList.remove('open');$('scrim').classList.remove('visible');$('mobileMenu').setAttribute('aria-expanded','false')}
 function switchPage(name){if(!names[name])return;document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id==='page-'+name));document.querySelectorAll('[data-page]').forEach(e=>e.classList.toggle('active',e.dataset.page===name));$('crumb').textContent=names[name];mobileClose();history.replaceState(null,'','#'+name);if(name==='applications')loadApps();if(name==='ranking')loadRanking();window.scrollTo({top:0,behavior:'instant'})}
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>switchPage(b.dataset.page)));
 document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>switchPage(b.dataset.open)));
-$('mobileMenu').addEventListener('click',()=>{$('sidebar').classList.add('open');$('scrim').classList.add('visible')});$('scrim').addEventListener('click',mobileClose);
+$('mobileMenu').addEventListener('click',()=>{const open=$('sidebar').classList.toggle('open');$('scrim').classList.toggle('visible',open);$('mobileMenu').setAttribute('aria-expanded',String(open));});$('scrim').addEventListener('click',mobileClose);
 function authDisplay(){const yes=!!user;$('guestAuth').hidden=yes;$('loggedProfile').hidden=!yes;$('adminLink').hidden=!yes||user.role!=='admin';$('userChip').textContent=yes?user.username:'Войти / Регистрация';if(yes){$('profileName').textContent=user.username;$('profileAvatar').textContent=user.username.charAt(0).toUpperCase()}else{$('overviewApplications').textContent='—'}}
 async function refreshAuth(){try{const d=await api('me');user=d.user}catch(e){user=null}authDisplay();if(user)loadApps()}
 $('userChip').addEventListener('click',()=>switchPage('profile'));

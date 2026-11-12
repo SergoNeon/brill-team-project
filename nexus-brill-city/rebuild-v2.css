@@ -1,0 +1,48 @@
+/* VERSION 2 — full layout replacement, asymmetric editorial art direction */
+body{background:#101014}
+.header{height:74px;background:#0b0c10!important;border-bottom:1px solid #5e5654;position:relative;padding:0 4.3vw}
+.header .wordmark{font-size:23px}
+.header nav{margin-left:auto}
+.header .account{border-color:#a78a71;background:#211a1a}
+.opening{height:auto;min-height:760px;background:#0b0c10;overflow:hidden}
+.opening-bg{inset:0 0 0 43%;background-position:62% center;transform:none;animation:none;clip-path:polygon(17% 0,100% 0,100% 100%,0 100%);filter:saturate(.75) contrast(1.12)}
+.opening-fade{background:linear-gradient(90deg,#0b0c10 0%,#0b0c10 33%,#0b0c10c2 48%,#0b0c1000 76%),linear-gradient(0deg,#0b0c10 0%,transparent 28%);z-index:-2}
+.opening:before{content:"";position:absolute;top:0;bottom:0;left:51%;width:1px;background:linear-gradient(transparent,#d9b28b99,transparent);transform:skewX(-12deg);z-index:1;pointer-events:none}
+.opening-inner{padding:85px 4.3vw 100px;max-width:none;min-height:720px;display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,.85fr);gap:20px;align-items:center}
+.hero-copy{position:relative;z-index:3;max-width:770px}
+.hero-copy h1{font-size:clamp(80px,10.5vw,180px);line-height:.89;letter-spacing:-.045em;margin:28px 0 34px}
+.hero-copy h1 em{display:inline-block;color:#e0b37e}
+.hero-copy p{max-width:385px}
+.hero-actions{margin-top:45px}
+.server-overlay{align-self:end;justify-self:end;z-index:3;margin:0 3vw 48px 0;background:#0b0c10dc;border:1px solid #bda17f80;padding:22px 25px;width:335px;box-shadow:0 24px 60px #0008}
+.vertical-mark{right:18px}
+.hero-bottom{left:4.3vw;right:4.3vw;z-index:4}
+.manifest{display:grid;grid-template-columns:42% 58%;min-height:630px;background:#e8e0d4;color:#17171b}
+.manifest-photo{min-height:630px;background-position:35% center;filter:saturate(.7)}
+.manifest-content{padding:clamp(45px,7vw,110px)}
+.manifest .overline{color:#8d342f}
+.manifest h2{font-size:clamp(57px,6vw,108px);margin:18px 0 30px}
+.manifest h2 i{color:#9b3537}
+.manifest p{color:#4a4745;font-size:15px}
+.manifest .arrow-link{color:#17171b;border-color:#9b3537}
+.manifest .arrow-link span{color:#9b3537}
+.explore{max-width:none;padding:120px 7vw;background:#111116;display:grid;grid-template-columns:34% 1fr;gap:8vw}
+.section-top{margin:0;position:sticky;top:40px;align-self:start}
+.section-top h2{font-size:clamp(60px,6vw,108px)}
+.editorial-links{margin-top:22px}
+.editorial-links a{grid-template-columns:1fr 35px;gap:5px 15px;padding:32px 0}
+.link-title{font-size:clamp(32px,3vw,49px)}
+.link-sub{grid-row:2;grid-column:1}
+.link-arrow{grid-column:2;grid-row:1/3}
+.news-section{max-width:none;padding:105px 7vw;background:#e8e0d4;color:#15161a}
+.news-heading h2{font-size:clamp(54px,5.6vw,100px)}
+.news-heading h2 i{color:#a33439}
+.news-section .overline,.news-section .arrow-link,.news-item time{color:#a33439}
+.news-section .arrow-link{border-color:#a33439}
+.news-item{border-top:2px solid #a33439}
+.news-item p{color:#575350}
+.last-call{min-height:550px;background:linear-gradient(90deg,#1b0b0dee,#1b0b0d65),url('assets/nexus-city-scene.jpg') center/cover}
+.last-call h2{font-size:clamp(65px,7vw,115px)}
+footer{background:#0a0a0e}
+@media(max-width:850px){.opening-inner{min-height:720px;padding:85px 32px 95px;grid-template-columns:1fr}.opening-bg{left:20%;clip-path:none;opacity:.6}.opening-fade{background:linear-gradient(90deg,#0b0c10e8,#0b0c1077),linear-gradient(0deg,#0b0c10,transparent 40%)}.opening:before{display:none}.hero-copy h1{font-size:clamp(75px,12vw,120px)}.server-overlay{justify-self:start;margin:0;width:320px}.manifest{grid-template-columns:1fr}.manifest-photo{min-height:400px}.manifest-content{padding:75px 36px}.explore{grid-template-columns:1fr;gap:40px;padding:85px 36px}.section-top{position:static}.news-section{padding:85px 36px}}
+@media(max-width:520px){.header{padding:0 18px}.opening{min-height:760px}.opening-bg{inset:0;background-position:62% center;opacity:.57}.opening-inner{padding:105px 20px 100px;min-height:760px;gap:25px}.hero-copy h1{font-size:clamp(69px,16vw,88px);line-height:.93}.hero-copy p{font-size:13px}.hero-actions{margin-top:30px}.server-overlay{width:100%;max-width:345px;margin:0;padding:19px}.manifest-photo{min-height:260px}.manifest-content{padding:55px 20px}.manifest h2{font-size:58px}.explore{padding:70px 20px}.section-top h2{font-size:66px}.news-section{padding:70px 20px}.news-heading h2{font-size:60px}.last-call h2{font-size:65px}}

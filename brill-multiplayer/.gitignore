@@ -1,0 +1,12 @@
+# Build output / private deployment keys
+**/build/
+**/.gradle/
+android/local.properties
+secure/
+release/
+*.jks
+*.keystore
+*.idsig
+*.log
+.DS_Store
+node_modules/

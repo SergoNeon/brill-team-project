@@ -67,3 +67,7 @@ The Android application now contains `NetworkSessionActivity.java`, showing a ge
 The separately signed beta, versionCode 3 (Android 8+ ARM64) is hosted at `https://nexus.brill.city:28912/multiplayer/BRILL-MULTIPLAYER-NETWORK-TEST.apk`. It can upgrade the originally signed package `city.brill.multiplayer`, though the full play button deliberately opens the connection test and warns the user that no GTA graphics are available. The official default launcher APK remains unchanged.
 
 The next major engineering dependency is lawful access to a game engine able to load GTA San Andreas with user-authorized game assets, a valid client-side integration interface, and an actual device test of rendering and gameplay. No third-party GTA libraries are committed to the BRILL source tree.
+
+## Native GTA game-process integration
+
+The new `gta-bridge/` module is the first cross-compiled ARM64 AndroidModLoader plugin that can work *inside* a legitimately installed GTA San Andreas game, detect its native engine and resolve BRILL's separately licensed SA-MP protocol core. It deliberately does **not** redistribute GTA engine code or use the abandoned Godot world. This module requires physical Android/AML testing before any compatible game loader or visual multiplayer sync can be claimed functional.

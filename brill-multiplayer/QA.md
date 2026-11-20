@@ -51,3 +51,11 @@ Do not claim that BRILL v0.1.0 is a 3D multiplayer game. It is a working native 
 The third-party Android GTA:SA game engine is a proprietary component (`libGTASA.so`) and is not included in the licensed BRILL source code. Public repositories with complete mobile SA-MP clients were studied but do not include an adequate redistributable code license and/or bundle proprietary GTA libraries. Android sandboxing prevents an arbitrary application from automatically using code or private files stored inside a separate application. Successfully building BRILL's network transport does not solve game rendering, local input/physics, legitimate game assets, client security, streaming or animation.
 
 **Do not clone, redistribute or bundle proprietary GTA SA game libraries from unverified forks.** A compliant client must have a legally permitted game-engine integration and properly authorized game assets, followed by Android device QA and real gameplay tests before claiming the main goal is complete.
+
+## BRILL ↔ Android GTA SA integration bridge (2026-11-20)
+
+- Reviewed a GPLv3 Android game plugin SDK and an MIT-licensed AndroidModLoader; selected only the MIT AML API headers for the initial cross-process *game mod* integration prototype.
+- Compiled a BRILL game-process module `gta-bridge/libs/arm64-v8a/libbrillgtabridge.so` with Android NDK 26.2.11394342. ARM64 ELF output is 369,176 bytes. Export verification passed for AML metadata, game filter, mod lifecycle callbacks and BRILL's C transport interface.
+- The module checks for the installed GTA native library and, when invoked explicitly from inside that game, can attempt to load BRILL's protocol library from the **same** Android process. No code injection into other apps or Rockstar binary redistribution is bundled.
+- **Not tested in GTA:** APK ownership/compatibility, AML loader installation, platform linker namespace support, game rendering/hooking, actual login and visual player syncing.
+- The original SA-MP production server remains active. This is the basis for legal game runtime integration, not a completed GTA client or an update to the released APK.

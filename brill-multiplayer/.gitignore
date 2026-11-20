@@ -20,3 +20,6 @@ android/app/src/main/jniLibs/
 android/app/src/main/cpp/libbrillprotocol.h
 android/app/src/main/cpp/libbrillprotocol.so
 client-core/build/
+gta-bridge/obj/
+gta-bridge/libs/
+gta-bridge/out/

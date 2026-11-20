@@ -59,3 +59,11 @@ The current code shares player coordinates for a simple colored capsule in a sma
 ## SA-MP protocol client development
 
 The first version of the real Android network transport is in `client-core/`; its implementation connects to SA-MP **0.3.DL-R1** and has passed QA network tests. The corresponding Android NDK/JNI wrapper is in `android/app/src/main/cpp` and `NativeBridge.java`. **It does not yet load and render GTA San Andreas** and must not be marketed as a completed replacement for ReSA. Building a playable client requires appropriate licensed GTA assets from the user's own installation and further integration of the mobile RenderWare-compatible runtime, native game hooks, game-world streaming and synchronization with SA-MP.
+
+## Native server session (development version 0.2.0)
+
+The Android application now contains `NetworkSessionActivity.java`, showing a genuine SA-MP 0.3.DL-R1 session without sending the player to a `samp://` application. It connects using our Android ARM64 native Go/RakNet bridge, displays protocol events and server dialogs, and can send chat and commands. This is a **network diagnostic**, **not a GTA San Andreas game-rendering client**.
+
+The separately signed beta, versionCode 3 (Android 8+ ARM64) is hosted at `https://nexus.brill.city:28912/multiplayer/BRILL-MULTIPLAYER-NETWORK-TEST.apk`. It can upgrade the originally signed package `city.brill.multiplayer`, though the full play button deliberately opens the connection test and warns the user that no GTA graphics are available. The official default launcher APK remains unchanged.
+
+The next major engineering dependency is lawful access to a game engine able to load GTA San Andreas with user-authorized game assets, a valid client-side integration interface, and an actual device test of rendering and gameplay. No third-party GTA libraries are committed to the BRILL source tree.

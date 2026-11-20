@@ -17,3 +17,21 @@
 ## Public release gate
 
 Do not claim that BRILL v0.1.0 is a 3D multiplayer game. It is a working native launcher; the full game runtime remains a separate development stream.
+
+## BRILL MULTIPLAYER 3D experimental runtime (2026-11-19)
+
+- Separate Godot 4.7 project in `game3d/`, package `city.brill.multiplayer.game`, APK 26.96 MiB.
+- Player sees a generated city and third-person camera; touch controls for movement and jump.
+- Standalone ENet dedicated server managed by `brill-multiplayer-3d.service` on UDP `28916`, isolated from original SA-MP UDP `27877`.
+- Two independent headless Godot clients joined simultaneously and server logged both peer joins.
+- Android APK exported successfully and APK signature v2/v3 verified, Internet permission present.
+- Public Android download `https://nexus.brill.city:28912/multiplayer/BRILL-MULTIPLAYER-3D-TEST.apk` checked externally over HTTPS, HTTP 200, zip header valid.
+- **Open issues:** game prototype has basic/placeholder geometrical city, no GTA assets or legacy SA-MP protocol, no real economy/factions/cars, no mobile handset test, peer position handling is basic (server relay without production-grade validation/authority). Multiplayer capacity 120 is a configured socket maximum, not a load-tested capacity.
+
+## Licensed native SA-MP transport integration (2026-11-19)
+
+- Identified an Apache-2.0 RakNet/SA-MP protocol implementation with support for 0.3.DL-R1. The closed/research-only Android client repositories were excluded from redistribution because their source licenses were unclear and binary GTA libraries were bundled.
+- Adapted the protocol-only Go modules into `client-core/` with upstream notice and license; 4 package test suites pass.
+- Verified the native C bridge against the isolated SA-MP QA service: actual RakNet connection, SA-MP join event, initial dialog and 18s stable session. No production account changes.
+- Built the ARM64 `libbrillprotocol.so` with Android NDK and the JNI `libbrilljni.so` inside the Android application. Android APK build passed in development mode; not publicly promoted because the game-world renderer is not yet connected.
+- Original SA-MP production service remains online. Wrong standalone Godot 3D test service disabled, no longer promoted as a real GTA multiplayer client.

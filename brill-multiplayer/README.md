@@ -47,3 +47,15 @@ Only the pre-configured official server is checked by the backend. User-added se
 5. Visual QA, accessibility, telemetry opt-in and app-store compliance.
 
 **No claims:** this v0.1.0 APK does not render a 3D world or replace ReSA. It is a functional independently built launcher and live directory frontend.
+
+## BRILL 3D experimental game client
+
+A separate **actual 3D networked test game** in `game3d/` has been added. It is built with Godot 4.7 and deliberately uses *no* proprietary GTA assets. Its own ENet test server listens on UDP 28916, separate from the old SA-MP RP server. Game UI has a button "ИГРАТЬ НА BRILL 3D". It is independent from the catalog-only launcher. Install the 3D test APK to run the actual 3D prototype, NOT the original small launcher package.
+
+Test APK: https://nexus.brill.city:28912/multiplayer/BRILL-MULTIPLAYER-3D-TEST.apk
+
+The current code shares player coordinates for a simple colored capsule in a small procedural city. It is not an SA-MP replacement and does not connect to the GTA map or GTA accounts.
+
+## SA-MP protocol client development
+
+The first version of the real Android network transport is in `client-core/`; its implementation connects to SA-MP **0.3.DL-R1** and has passed QA network tests. The corresponding Android NDK/JNI wrapper is in `android/app/src/main/cpp` and `NativeBridge.java`. **It does not yet load and render GTA San Andreas** and must not be marketed as a completed replacement for ReSA. Building a playable client requires appropriate licensed GTA assets from the user's own installation and further integration of the mobile RenderWare-compatible runtime, native game hooks, game-world streaming and synchronization with SA-MP.

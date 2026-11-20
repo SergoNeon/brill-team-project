@@ -1,0 +1,1 @@
+BRILL MULTIPLAYER JNI transport. The linked libbrillprotocol.so is generated locally by client-core/bridge/bridge.go. JNI code does not load or ship proprietary GTA:SA game libraries. Network connectivity alone does not render a game world.

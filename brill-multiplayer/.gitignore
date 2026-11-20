@@ -10,3 +10,13 @@ release/
 *.log
 .DS_Store
 node_modules/
+game3d/.godot/
+game3d/build/
+# Local source studies and SDK toolchains, never published
+research/
+toolchain/
+android/app/.cxx/
+android/app/src/main/jniLibs/
+android/app/src/main/cpp/libbrillprotocol.h
+android/app/src/main/cpp/libbrillprotocol.so
+client-core/build/

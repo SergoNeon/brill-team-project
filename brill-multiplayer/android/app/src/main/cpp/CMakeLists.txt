@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(brill_native_client LANGUAGES CXX)
+add_library(brillprotocol SHARED IMPORTED)
+set_target_properties(brillprotocol PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libbrillprotocol.so")
+add_library(brilljni SHARED brilljni.cpp)
+set_target_properties(brilljni PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
+target_link_libraries(brilljni brillprotocol log)
